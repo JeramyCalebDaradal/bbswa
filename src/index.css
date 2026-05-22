@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bbs-orange: #ffa800;
+  --color-bbs-dark: #2b2a2a;
+  --color-bbs-muted: #2d2626;
+  --color-bbs-surface: #f1f4f8;
+  --color-bbs-surface-alt: #f6faff;
+  --color-bbs-card: #fbfcff;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 font-sans text-bbs-dark antialiased;
+  }
+
+  img {
+    @apply max-w-full;
+  }
+}
