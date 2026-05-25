@@ -17,9 +17,21 @@
 
   body {
     @apply m-0 font-sans text-bbs-dark antialiased;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   img {
     @apply max-w-full;
+    -webkit-user-drag: none;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }

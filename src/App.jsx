@@ -10,6 +10,60 @@ import PartnersPage from './pages/PartnersPage'
 import UnderConstructionPage from './pages/UnderConstructionPage'
 import { useLocation } from 'react-router-dom'
 
+function isEditableTarget(target) {
+  return target instanceof HTMLElement && Boolean(target.closest('input, textarea, [contenteditable="true"]'))
+}
+
+function ContentProtection() {
+  useEffect(() => {
+    const onCopyCut = (event) => {
+      if (isEditableTarget(event.target)) {
+        return
+      }
+      event.preventDefault()
+    }
+
+    const onKeyDown = (event) => {
+      const modifier = event.ctrlKey || event.metaKey
+      if (!modifier) {
+        return
+      }
+      const key = event.key.toLowerCase()
+      if ((key === 'c' || key === 'x') && !isEditableTarget(event.target)) {
+        event.preventDefault()
+      }
+    }
+
+    const onContextMenu = (event) => {
+      if (event.target instanceof Element && event.target.closest('img')) {
+        event.preventDefault()
+      }
+    }
+
+    const onDragStart = (event) => {
+      if (event.target instanceof Element && event.target.closest('img')) {
+        event.preventDefault()
+      }
+    }
+
+    document.addEventListener('copy', onCopyCut)
+    document.addEventListener('cut', onCopyCut)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('contextmenu', onContextMenu)
+    document.addEventListener('dragstart', onDragStart)
+
+    return () => {
+      document.removeEventListener('copy', onCopyCut)
+      document.removeEventListener('cut', onCopyCut)
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('contextmenu', onContextMenu)
+      document.removeEventListener('dragstart', onDragStart)
+    }
+  }, [])
+
+  return null
+}
+
 function ScrollToHash() {
   const location = useLocation()
 
@@ -36,6 +90,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
+        <ContentProtection />
         <ScrollToHash />
         <Routes>
           <Route path="/" element={<HomePage />} />
