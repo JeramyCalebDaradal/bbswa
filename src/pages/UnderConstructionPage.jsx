@@ -16,7 +16,7 @@ export default function UnderConstructionPage({ title }) {
             <h1 className="mt-3 text-4xl font-bold leading-tight text-bbs-dark sm:text-5xl">{title}</h1>
             <h2 className="mt-4 text-3xl font-bold text-bbs-dark sm:text-4xl">Under Construction</h2>
             <p className="mt-5 text-base leading-relaxed text-bbs-muted sm:text-lg">
-              Improving security checks, come back later...
+              Security first. Content shortly after...
             </p>
           </div>
           <div className="relative flex min-h-[320px] items-center justify-center lg:justify-start">
