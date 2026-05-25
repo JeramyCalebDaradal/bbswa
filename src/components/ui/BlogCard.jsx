@@ -2,7 +2,7 @@ import { images } from '../../assets/images'
 
 export default function BlogCard({ title, date, author, image }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
+    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md pb-5">
       <div className="aspect-[16/10] overflow-hidden border-b border-gray-200">
         <img src={image} alt="" className="h-full w-full object-cover" />
       </div>
@@ -17,7 +17,7 @@ export default function BlogCard({ title, date, author, image }) {
             By <span className="text-bbs-orange">{author}</span>
           </span>
         </div>
-        <h3 className="text-base font-bold leading-snug text-bbs-muted sm:text-lg">{title}</h3>
+        <h3 className="text-base font-bold mt-5 leading-snug text-bbs-muted sm:text-lg">{title}</h3>
       </div>
     </article>
   )

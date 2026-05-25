@@ -24,7 +24,7 @@ export default function AlliancesSection() {
   const midpoint = Math.ceil(images.alliances.length / 2)
 
   return (
-    <Section className="bg-white py-14 sm:py-20">
+    <Section className="bg-white py-18 sm:py-30">
       <LogoRow title="Our Alliances" logos={images.alliances.slice(0, midpoint)} />
       <div className="my-16 sm:my-20" aria-hidden="true" />
       <LogoRow title="Our Partners" logos={images.alliances.slice(midpoint)} />

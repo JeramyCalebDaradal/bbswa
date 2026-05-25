@@ -10,7 +10,7 @@ export default function ServicesSection() {
     <Section
       id="services"
       disableContainer
-      className="relative overflow-hidden bg-black py-14 text-white sm:py-20"
+      className="relative overflow-hidden bg-black text-white py-18 sm:py-30"
     >
       <div className="absolute inset-0 opacity-30">
         <img src={images.globe} alt="" className="h-full w-full object-cover" />

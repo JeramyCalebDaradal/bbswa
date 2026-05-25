@@ -5,7 +5,7 @@ import { whyChooseUs } from '../../data/homeContent'
 
 export default function WhyChooseUsSection() {
   return (
-    <Section className="bg-white py-14 sm:py-20">
+    <Section className="bg-white py-18 sm:py-30">
       <SectionHeading title="Why Choose Us?" align="center" className="mb-10 mx-auto" />
 
       <div className="grid gap-8 md:grid-cols-2">

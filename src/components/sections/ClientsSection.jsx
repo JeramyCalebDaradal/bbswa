@@ -13,7 +13,7 @@ function ClientIcon({ icon, label }) {
 
 export default function ClientsSection() {
   return (
-    <Section className="bg-bbs-surface py-[66px] sm:py-[90px]">
+    <Section className="bg-bbs-surface py-18 sm:py-30">
       <SectionHeading title="Our Clients" className="mb-6" />
       <p className="mb-10 max-w-5xl text-base leading-relaxed text-bbs-muted sm:text-lg">
         Our clients are the majority of government agencies, conglomerates or private businesses and

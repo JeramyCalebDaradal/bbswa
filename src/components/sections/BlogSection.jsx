@@ -5,7 +5,7 @@ import { blogPosts } from '../../data/homeContent'
 
 export default function BlogSection() {
   return (
-    <Section className="bg-[#F6FAFF] py-14 sm:py-20">
+    <Section className="bg-[#F6FAFF] py-18 sm:py-30">
       <SectionHeading
         eyebrow="Popular News"
         title="Latest From our blog"

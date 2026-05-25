@@ -5,7 +5,7 @@ import { testimonials } from '../../data/homeContent'
 
 export default function TestimonialsSection() {
   return (
-    <Section className="bg-white py-14 sm:py-20">
+    <Section className="bg-white py-18 sm:py-30">
       <SectionHeading
         eyebrow="Testimonial"
         title="What Clients Say"
