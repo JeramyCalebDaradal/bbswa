@@ -1,5 +1,6 @@
 import Section from '../layout/Section'
 import AccentButton from '../ui/AccentButton'
+import { Link as RouterLink } from 'react-router-dom'
 import { images } from '../../assets/images'
 
 export default function PartnershipSection() {
@@ -27,7 +28,9 @@ export default function PartnershipSection() {
             Yes, we mean business, but it does not mean we cannot have fun. Events and recreational
             activities are also part of the program.
           </p>
-          <AccentButton className="!mt-8 !w-fit">Learn More</AccentButton>
+          <AccentButton component={RouterLink} to="/partners" className="!mt-8 !w-fit">
+            Learn More
+          </AccentButton>
         </div>
       </div>
     </Section>

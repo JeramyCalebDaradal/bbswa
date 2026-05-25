@@ -1,13 +1,13 @@
 import { images } from '../assets/images'
 
 export const navLinks = [
-  { label: 'Home', href: '#home', active: true },
-  { label: 'Services', href: '#services' },
-  { label: 'About', href: '#about' },
-  { label: 'Resources', href: '#' },
-  { label: 'Events', href: '#' },
-  { label: 'Career', href: '#' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Home', href: '/', match: ['/', '/#home'] },
+  { label: 'Services', href: '/#services', match: ['/'] },
+  { label: 'About', href: '/about', match: ['/about'] },
+  { label: 'Resources', href: '/resources', match: ['/resources'] },
+  { label: 'Events', href: '/events', match: ['/events'] },
+  { label: 'Career', href: '/career', match: ['/career'] },
+  { label: 'Contact', href: '/#contact', match: ['/'] },
 ]
 
 export const aboutFeatures = [

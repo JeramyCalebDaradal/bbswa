@@ -7,11 +7,27 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import MenuIcon from '@mui/icons-material/Menu'
 import CloseIcon from '@mui/icons-material/Close'
+import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { images } from '../../assets/images'
 import { navLinks } from '../../data/homeContent'
 
 export default function Header({ overlay = false }) {
   const [open, setOpen] = useState(false)
+  const location = useLocation()
+
+  const isActive = (href) => {
+    if (href === '/') {
+      return location.pathname === '/' && (!location.hash || location.hash === '#home')
+    }
+    if (href.startsWith('/#')) {
+      const targetHash = href.replace('/', '')
+      if (targetHash === '#services' && location.pathname.startsWith('/services')) {
+        return true
+      }
+      return (location.pathname === '/' && location.hash === targetHash)
+    }
+    return location.pathname === href
+  }
 
   return (
     <>
@@ -20,22 +36,22 @@ export default function Header({ overlay = false }) {
           overlay ? 'bg-transparent' : 'bg-black'
         }`}
       >
-        <div className="mx-auto flex max-w-screen-xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8 pt-10">
-          <a href="#home" className="shrink-0">
-            <img src={images.logo} alt="Black Bear Securities" className="h-17 w-auto sm:h-17" />
-          </a>
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-5 py-4 pt-10 sm:px-8 lg:px-12">
+          <RouterLink to="/" className="shrink-0">
+            <img src={images.logo} alt="Black Bear Securities" className="h-12 w-auto sm:h-14" />
+          </RouterLink>
 
           <nav className="hidden items-center gap-4 lg:flex xl:gap-6" aria-label="Main navigation">
             {navLinks.map((link) => (
-              <a
+              <RouterLink
                 key={link.label}
-                href={link.href}
+                to={link.href}
                 className={`text-sm transition-colors xl:text-base ${
-                  link.active ? 'font-semibold text-bbs-orange' : 'text-white hover:text-bbs-orange'
+                  isActive(link.href) ? 'font-semibold text-bbs-orange' : 'text-white hover:text-bbs-orange'
                 }`}
               >
                 {link.label}
-              </a>
+              </RouterLink>
             ))}
           </nav>
 
@@ -61,11 +77,16 @@ export default function Header({ overlay = false }) {
           </div>
           <List>
             {navLinks.map((link) => (
-              <ListItemButton key={link.label} component="a" href={link.href} onClick={() => setOpen(false)}>
+              <ListItemButton
+                key={link.label}
+                component={RouterLink}
+                to={link.href}
+                onClick={() => setOpen(false)}
+              >
                 <ListItemText
                   primary={link.label}
                   primaryTypographyProps={{
-                    className: link.active ? 'text-bbs-orange font-semibold' : 'text-white',
+                    className: isActive(link.href) ? 'text-bbs-orange font-semibold' : 'text-white',
                   }}
                 />
               </ListItemButton>

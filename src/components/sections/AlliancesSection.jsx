@@ -12,7 +12,7 @@ function LogoRow({ title, logos }) {
       <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-6 sm:gap-x-10 sm:gap-y-8">
         {logos.map((logo, index) => (
           <div key={`${title}-${index}`} className="flex w-28 items-center justify-center sm:w-32">
-            <img src={logo} alt="" className="max-h-10 w-full object-contain sm:max-h-12" />
+            <img src={logo} alt="" className="max-h-14 w-full object-contain sm:max-h-30" />
           </div>
         ))}
       </div>

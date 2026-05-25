@@ -11,7 +11,11 @@ export default function Section({
   const content = disableContainer ? (
     children
   ) : (
-    <Container maxWidth="xl" className={`px-4 sm:px-6 lg:px-8 ${containerClassName}`}>
+    <Container
+      maxWidth={false}
+      disableGutters
+      className={`mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-12 ${containerClassName}`}
+    >
       {children}
     </Container>
   )

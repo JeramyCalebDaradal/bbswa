@@ -18,7 +18,7 @@ export default function HeroSection() {
       <div className="relative">
         <Header overlay />
 
-        <div className="mx-auto grid max-w-screen-xl gap-10 px-4 pb-16 pt-4 sm:px-6 sm:pb-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14 lg:px-8 lg:pb-24 lg:pt-6">
+        <div className="mx-auto grid w-full max-w-[1280px] gap-10 px-5 pb-16 pt-4 sm:px-8 sm:pb-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14 lg:px-12 lg:pb-24 lg:pt-6">
           <div className="max-w-2xl">
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
               <span className="text-bbs-orange">Secure </span>

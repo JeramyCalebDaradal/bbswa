@@ -5,7 +5,8 @@ export default function AccentButton({ children, className = '', ...props }) {
     <Button
       variant="contained"
       color="primary"
-      className={`!px-8 !py-3 !text-base !shadow-none hover:!bg-[#e69700] ${className}`}
+      sx={{ fontWeight: 400}}
+      className={`!px-8 !py-3 !rounded-[18px] !shadow-none hover:!bg-[#e69700] !text-base  ${className}`}
       {...props}
     >
       {children}
