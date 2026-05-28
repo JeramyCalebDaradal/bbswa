@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -12,6 +12,8 @@ import {
   Typography,
   IconButton,
   Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -27,7 +29,15 @@ import '../styles/sidebar.css'
 
 export default function Sidebar({ activeSection, setActiveSection, isMobileOpen, setIsMobileOpen }) {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [blogExpanded, setBlogExpanded] = useState(false)
+
+  useEffect(() => {
+    if (!isMobile && isMobileOpen) {
+      setIsMobileOpen(false)
+    }
+  }, [isMobile, isMobileOpen, setIsMobileOpen])
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated')
@@ -138,28 +148,30 @@ export default function Sidebar({ activeSection, setActiveSection, isMobileOpen,
 
   return (
     <>
-      <IconButton
-        className="sidebar-mobile-toggle"
-        onClick={() => setIsMobileOpen(true)}
-        size="small"
-      >
-        <MenuIcon />
-      </IconButton>
+      {isMobile && (
+        <IconButton
+          className="sidebar-mobile-toggle"
+          onClick={() => setIsMobileOpen(true)}
+          size="small"
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
 
       {/* Desktop Sidebar */}
-      <aside className="sidebar-desktop">
-        {sidebarContent}
-      </aside>
+      {!isMobile && <aside className="sidebar-desktop">{sidebarContent}</aside>}
 
       {/* Mobile Drawer */}
-      <Drawer
-        anchor="left"
-        open={isMobileOpen}
-        onClose={() => setIsMobileOpen(false)}
-        className="sidebar-drawer"
-      >
-        {sidebarContent}
-      </Drawer>
+      {isMobile && (
+        <Drawer
+          anchor="left"
+          open={isMobileOpen}
+          onClose={() => setIsMobileOpen(false)}
+          className="sidebar-drawer"
+        >
+          {sidebarContent}
+        </Drawer>
+      )}
     </>
   )
 }
