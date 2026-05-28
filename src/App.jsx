@@ -8,6 +8,8 @@ import ServiceDetailPage from './pages/ServiceDetailPage'
 import AboutPage from './pages/AboutPage'
 import PartnersPage from './pages/PartnersPage'
 import UnderConstructionPage from './pages/UnderConstructionPage'
+import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
 import { useLocation } from 'react-router-dom'
 
 function isEditableTarget(target) {
@@ -101,6 +103,8 @@ function App() {
           <Route path="/career" element={<UnderConstructionPage title="Career" />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<ServiceDetailPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
