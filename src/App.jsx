@@ -7,6 +7,9 @@ import ServicesPage from './pages/ServicesPage'
 import ServiceDetailPage from './pages/ServiceDetailPage'
 import AboutPage from './pages/AboutPage'
 import PartnersPage from './pages/PartnersPage'
+import ResourcesPage from './pages/ResourcesPage'
+import EventsPage from './pages/EventsPage'
+import CareerPage from './pages/CareerPage'
 import UnderConstructionPage from './pages/UnderConstructionPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -98,9 +101,9 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/partners" element={<PartnersPage />} />
-          <Route path="/resources" element={<UnderConstructionPage title="Resources" />} />
-          <Route path="/events" element={<UnderConstructionPage title="Events" />} />
-          <Route path="/career" element={<UnderConstructionPage title="Career" />} />
+          <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/career" element={<CareerPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<ServiceDetailPage />} />
           <Route path="/login" element={<LoginPage />} />

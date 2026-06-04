@@ -83,4 +83,51 @@ export const images = {
     rewardPartner: asset('partners-page/reward-partner.png'),
     success: asset('partners-page/success.png'),
   },
+  resourcesPage: {
+    heroBg: asset('resources-page/resources-hero-bg.png'),
+    iconArticles: asset('resources-page/resources-icon-articles.png'),
+    iconDatasheets: asset('resources-page/resources-icon-datasheets.png'),
+    iconVideos: asset('resources-page/resources-icon-videos.png'),
+    datasheets: {
+      enterpriseIcon: asset('resources-page/datasheets/datasheet-icon-enterprise.png'),
+      networkIcon: asset('resources-page/datasheets/datasheet-icon-network.png'),
+      managedIcon: asset('resources-page/datasheets/datasheet-icon-managed.png'),
+      downloadIcon: asset('resources-page/datasheets/datasheet-icon-download.png'),
+    },
+    videos: {
+      playIcon: asset('resources-page/videos/video-icon-play.png'),
+      gettingStartedThumb: asset('resources-page/videos/video-thumb-getting-started.png'),
+      bestPracticesThumb: asset('resources-page/videos/video-thumb-best-practices.png'),
+      advancedConfigThumb: asset('resources-page/videos/video-thumb-advanced-config.png'),
+    },
+  },
+  eventsPage: {
+    heroBg: asset('events-page/events-hero-bg.png'),
+    upcoming: {
+      cybersecuritySummit: asset('events-page/event-cybersecurity-summit.png'),
+      cloudWebinar: asset('events-page/event-cloud-webinar.png'),
+      networkWorkshop: asset('events-page/event-network-workshop.png'),
+      digitalRoundtable: asset('events-page/event-digital-roundtable.png'),
+    },
+    icons: {
+      calendar: asset('events-page/event-icon-calendar.png'),
+      clock: asset('events-page/event-icon-clock.png'),
+      location: asset('events-page/event-icon-location.png'),
+      users: asset('events-page/event-icon-users.png'),
+      play: asset('events-page/event-icon-play.png'),
+      arrowRight: asset('events-page/event-icon-arrow-right.png'),
+    },
+  },
+  careerPage: {
+    heroBg: asset('career-page/career-hero-bg.png'),
+    icons: {
+      collaborative: asset('career-page/icons/career-icon-collaborative.png'),
+      growth: asset('career-page/icons/career-icon-growth.png'),
+      benefits: asset('career-page/icons/career-icon-benefits.png'),
+      balance: asset('career-page/icons/career-icon-balance.png'),
+      location: asset('career-page/icons/career-icon-location.png'),
+      briefcase: asset('career-page/icons/career-icon-briefcase.png'),
+      clock: asset('career-page/icons/career-icon-clock.png'),
+    },
+  },
 }
