@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Container } from '@mui/material'
 import Sidebar from '../components/dashboard/Sidebar'
 import DashboardOverview from '../components/dashboard/DashboardOverview'
-import ProfileSettings from '../components/dashboard/ProfileSettings'
-import BlogPosts from '../components/dashboard/BlogPosts'
-import BlogTags from '../components/dashboard/BlogTags'
-import BlogCategories from '../components/dashboard/BlogCategories'
-import '../styles/dashboard.css'
+import Appointments from '../components/dashboard/Appointments'
+import Leads from '../components/dashboard/Leads'
+import Blog from '../components/dashboard/Blog'
+import Events from '../components/dashboard/Events'
+import Newsletter from '../components/dashboard/Newsletter'
+import Reports from '../components/dashboard/Reports'
+import Settings from '../components/dashboard/Settings'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -25,27 +26,37 @@ export default function DashboardPage() {
     switch (activeSection) {
       case 'overview':
         return <DashboardOverview />
-      case 'profile':
-        return <ProfileSettings />
-      case 'blog-posts':
-        return <BlogPosts />
-      case 'blog-tags':
-        return <BlogTags />
-      case 'blog-categories':
-        return <BlogCategories />
+      case 'appointments':
+        return <Appointments />
+      case 'leads':
+        return <Leads />
+      case 'blog':
+        return <Blog />
+      case 'events':
+        return <Events />
+      case 'newsletter':
+        return <Newsletter />
+      case 'reports':
+        return <Reports />
+      case 'settings':
+        return <Settings />
       default:
         return <DashboardOverview />
     }
   }
 
   return (
-    <Box className="dashboard-layout">
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-      <main className="dashboard-main">
-        <Container maxWidth="lg" className="dashboard-container">
-          {renderContent()}
-        </Container>
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+      />
+
+      <main className="px-4 pb-10 pt-20 md:ml-64 md:px-8 md:pt-8">
+        <section className="mx-auto w-full max-w-6xl">{renderContent()}</section>
       </main>
-    </Box>
+    </div>
   )
 }
