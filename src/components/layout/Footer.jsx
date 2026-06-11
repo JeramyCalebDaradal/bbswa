@@ -3,6 +3,14 @@ import Button from '@mui/material/Button'
 import Section from './Section'
 import { images } from '../../assets/images'
 import { footerServices } from '../../data/homeContent'
+import { useWebsiteSettings } from '../../useWebsiteSettings'
+
+function telHref(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const cleaned = raw.replace(/[^\d+]/g, '')
+  return cleaned ? `tel:${cleaned}` : ''
+}
 
 function ContactLine({ icon, children, href }) {
   const content = (
@@ -24,11 +32,17 @@ function ContactLine({ icon, children, href }) {
 }
 
 export default function Footer() {
+  const website = useWebsiteSettings()
+  const companyName = String(website?.websiteSettings?.company_name || '').trim() || 'Black Bear Securities'
+  const contactEmail = String(website?.websiteSettings?.contact_email || '').trim() || 'concierge@blackbearsecurities.com'
+  const contactNumber = String(website?.websiteSettings?.contact_number || '').trim() || '63286837594'
+  const contactNumberHref = telHref(contactNumber)
+
   return (
     <footer id="contact" className="bg-black text-white">
       <Section className="py-12 sm:py-16">
         <div className="mb-10 sm:mb-12">
-          <img src={images.logo} alt="Black Bear Securities" className="h-16 w-auto sm:h-20" />
+          <img src={images.logo} alt={companyName} className="h-16 w-auto sm:h-20" />
         </div>
 
         <div className="grid gap-10 md:grid-cols-3">
@@ -44,11 +58,11 @@ export default function Footer() {
                   Philippines
                 </>
               </ContactLine>
-              <ContactLine icon={images.footer.email} href="mailto:concierge@blackbearsecurities.com">
-                concierge@blackbearsecurities.com
+              <ContactLine icon={images.footer.email} href={contactEmail ? `mailto:${contactEmail}` : ''}>
+                {contactEmail}
               </ContactLine>
-              <ContactLine icon={images.footer.phone} href="tel:+63286837594">
-                63286837594
+              <ContactLine icon={images.footer.phone} href={contactNumberHref}>
+                {contactNumber}
               </ContactLine>
             </address>
           </div>

@@ -28,3 +28,14 @@ export async function updateAdminUser(id, { role, status }) {
     body: { role, status },
   })
 }
+
+export async function getAdminSettings() {
+  return apiRequest('/admin/settings')
+}
+
+export async function updateAdminSettings(payload) {
+  return apiRequest('/admin/settings', {
+    method: 'PUT',
+    body: payload,
+  })
+}

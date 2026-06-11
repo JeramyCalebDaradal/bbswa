@@ -86,7 +86,7 @@ export function roleAllowsDashboardSection(role, sectionId) {
     Analyst: new Set(['reports']),
     'Event Coordinator': new Set(['events', 'appointments']),
     'Basic User': new Set([]),
-    'System Admin': new Set(['settings']),
+    'System Admin': new Set([]),
   }
 
   return Boolean(map[r]?.has(s))

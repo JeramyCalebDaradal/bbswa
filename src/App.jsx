@@ -28,6 +28,7 @@ import DashboardProfileSettingsPage from './pages/DashboardPages/DashboardProfil
 import DashboardLogsPage from './pages/DashboardPages/DashboardLogsPage'
 import { useLocation } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
+import WebsiteSettingsProvider from './WebsiteSettingsProvider'
 
 function isEditableTarget(target) {
   return target instanceof HTMLElement && Boolean(target.closest('input, textarea, [contenteditable="true"]'))
@@ -158,46 +159,48 @@ function ScrollToHash() {
   return null
 }
 
-function App() {
+function App({ initialWebsiteSettings }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        <ToastProvider>
-          <DeterrenceMode />
-          <ContentProtection />
-          <ScrollToHash />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/partners" element={<PartnersPage />} />
-            <Route path="/resources" element={<ResourcesPage />} />
-            <Route path="/resources/articles/:slug" element={<ArticlePage />} />
-            <Route path="/events" element={<EventsPage />} />
-            <Route path="/career" element={<CareerPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/services/:slug" element={<ServiceDetailPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<DashboardPage />}>
-              <Route index element={<Navigate to="overview" replace />} />
-              <Route path="overview" element={<DashboardOverviewPage />} />
-              <Route path="appointments" element={<DashboardAppointmentsPage />} />
-              <Route path="leads" element={<DashboardLeadsPage />} />
-              <Route path="blog" element={<DashboardBlogPage />} />
-              <Route path="datasheets" element={<DashboardDatasheetsPage />} />
-              <Route path="info-videos" element={<DashboardInfoVideosPage />} />
-              <Route path="events" element={<DashboardEventsPage />} />
-              <Route path="newsletter" element={<DashboardNewsletterPage />} />
-              <Route path="reports" element={<DashboardReportsPage />} />
-              <Route path="logs" element={<DashboardLogsPage />} />
-              <Route path="settings" element={<DashboardSettingsPage />} />
-              <Route path="profile-settings" element={<DashboardProfileSettingsPage />} />
-              <Route path="*" element={<Navigate to="overview" replace />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </ToastProvider>
-      </BrowserRouter>
+      <WebsiteSettingsProvider initialWebsiteSettings={initialWebsiteSettings}>
+        <BrowserRouter>
+          <ToastProvider>
+            <DeterrenceMode />
+            <ContentProtection />
+            <ScrollToHash />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/partners" element={<PartnersPage />} />
+              <Route path="/resources" element={<ResourcesPage />} />
+              <Route path="/resources/articles/:slug" element={<ArticlePage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/career" element={<CareerPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/services/:slug" element={<ServiceDetailPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dashboard" element={<DashboardPage />}>
+                <Route index element={<Navigate to="overview" replace />} />
+                <Route path="overview" element={<DashboardOverviewPage />} />
+                <Route path="appointments" element={<DashboardAppointmentsPage />} />
+                <Route path="leads" element={<DashboardLeadsPage />} />
+                <Route path="blog" element={<DashboardBlogPage />} />
+                <Route path="datasheets" element={<DashboardDatasheetsPage />} />
+                <Route path="info-videos" element={<DashboardInfoVideosPage />} />
+                <Route path="events" element={<DashboardEventsPage />} />
+                <Route path="newsletter" element={<DashboardNewsletterPage />} />
+                <Route path="reports" element={<DashboardReportsPage />} />
+                <Route path="logs" element={<DashboardLogsPage />} />
+                <Route path="settings" element={<DashboardSettingsPage />} />
+                <Route path="profile-settings" element={<DashboardProfileSettingsPage />} />
+                <Route path="*" element={<Navigate to="overview" replace />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ToastProvider>
+        </BrowserRouter>
+      </WebsiteSettingsProvider>
     </ThemeProvider>
   )
 }

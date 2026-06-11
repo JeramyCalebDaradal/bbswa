@@ -1,18 +1,20 @@
 import { Bell, Calendar, Eye, EyeOff, Globe, Save, Users as UsersIcon, X, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { createAdminUser, listRoles, listUsers, updateAdminUser } from '../../api/admin'
+import { createAdminUser, getAdminSettings, listRoles, listUsers, updateAdminSettings, updateAdminUser } from '../../api/admin'
 import { readUser } from '../../auth/session'
 import { useToast } from '../ui/useToast'
+import { useWebsiteSettings } from '../../useWebsiteSettings'
 
-function Toggle({ defaultChecked = false, checked, onChange }) {
+function Toggle({ defaultChecked = false, checked, onChange, disabled = false }) {
   return (
-    <label className="relative inline-flex cursor-pointer items-center">
+    <label className={`relative inline-flex items-center ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
       <input
         type="checkbox"
         className="peer sr-only"
         defaultChecked={defaultChecked}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
       />
       <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300" />
     </label>
@@ -35,6 +37,7 @@ function SettingsCard({ icon: Icon, iconGradient, title, children }) {
 
 export default function Settings() {
   const toast = useToast()
+  const website = useWebsiteSettings()
   const currentUser = useMemo(() => readUser(), [])
   const isSuperAdmin = String(currentUser?.role || '') === 'Super Admin'
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false)
@@ -62,10 +65,78 @@ export default function Settings() {
   const [isUpdatingUser, setIsUpdatingUser] = useState(false)
   const [editError, setEditError] = useState('')
 
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+  const [isSavingSettings, setIsSavingSettings] = useState(false)
+
+  const [companyName, setCompanyName] = useState(() => String(website?.websiteSettings?.company_name || '').trim())
+  const [contactEmail, setContactEmail] = useState(() => String(website?.websiteSettings?.contact_email || '').trim())
+  const [contactNumber, setContactNumber] = useState(() => String(website?.websiteSettings?.contact_number || '').trim())
+
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false)
+  const [autoCreateLeadFromAppointment, setAutoCreateLeadFromAppointment] = useState(false)
+  const [autoFollowupRemindersEnabled, setAutoFollowupRemindersEnabled] = useState(false)
+
   const fallbackRoles = useMemo(
     () => ['Content Manager', 'Sales Agent', 'Analyst', 'Event Coordinator', 'Basic User', 'System Admin'],
     []
   )
+
+  const loadSettings = async () => {
+    setSettingsError('')
+    setIsSettingsLoading(true)
+    try {
+      const res = await getAdminSettings()
+      const s = res?.settings
+      if (!s || typeof s !== 'object') {
+        throw new Error('Failed to load settings')
+      }
+      setCompanyName(String(s.company_name || '').trim())
+      setContactEmail(String(s.contact_email || '').trim())
+      setContactNumber(String(s.contact_number || '').trim())
+      setEmailNotificationsEnabled(Boolean(s.email_notifications_enabled))
+      setAutoCreateLeadFromAppointment(Boolean(s.auto_create_lead_from_appointment))
+      setAutoFollowupRemindersEnabled(Boolean(s.auto_followup_reminders_enabled))
+    } catch (err) {
+      const message = err?.message || 'Failed to load settings'
+      setSettingsError(message)
+      toast.error(message)
+    } finally {
+      setIsSettingsLoading(false)
+    }
+  }
+
+  const handleSaveSettings = async () => {
+    if (!isSuperAdmin) return
+    setIsSavingSettings(true)
+    try {
+      const res = await updateAdminSettings({
+        company_name: companyName,
+        contact_email: contactEmail,
+        contact_number: contactNumber,
+        auto_create_lead_from_appointment: autoCreateLeadFromAppointment,
+      })
+      const s = res?.settings
+      if (s && typeof s === 'object') {
+        setCompanyName(String(s.company_name || '').trim())
+        setContactEmail(String(s.contact_email || '').trim())
+        setContactNumber(String(s.contact_number || '').trim())
+        setEmailNotificationsEnabled(Boolean(s.email_notifications_enabled))
+        setAutoCreateLeadFromAppointment(Boolean(s.auto_create_lead_from_appointment))
+        setAutoFollowupRemindersEnabled(Boolean(s.auto_followup_reminders_enabled))
+        website?.setWebsiteSettings?.({
+          company_name: String(s.company_name || '').trim(),
+          contact_email: String(s.contact_email || '').trim(),
+          contact_number: String(s.contact_number || '').trim(),
+        })
+      }
+      toast.success('Settings updated')
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update settings')
+    } finally {
+      setIsSavingSettings(false)
+    }
+  }
 
   const refreshUsers = async () => {
     setUsersError('')
@@ -85,6 +156,15 @@ export default function Settings() {
     const timeoutId = window.setTimeout(() => {
       if (isSuperAdmin) {
         refreshUsers()
+      }
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      if (isSuperAdmin) {
+        loadSettings()
       }
     }, 0)
     return () => window.clearTimeout(timeoutId)
@@ -236,40 +316,63 @@ export default function Settings() {
 
       <section className="space-y-6">
         <SettingsCard icon={Globe} iconGradient="from-amber-400 to-amber-600" title="Website Information">
-          <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Company Name</label>
-              <input
-                type="text"
-                defaultValue="Black Bear Securities"
-                className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Website URL</label>
-              <input
-                type="text"
-                defaultValue="https://coruscating-marigold-4e5c17.netlify.app/"
-                className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Contact Email</label>
-              <input
-                type="email"
-                defaultValue="info@blackbearsecurities.com"
-                className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Phone Number</label>
-              <input
-                type="tel"
-                defaultValue="+1 (555) 000-0000"
-                className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-          </div>
+          <section className="space-y-4">
+            {settingsError ? (
+              <section className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{settingsError}</section>
+            ) : null}
+
+            <section className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="bg-white">
+                    <td className="w-1/3 px-4 py-3 font-medium text-gray-700">Company Name</td>
+                    <td className="px-4 py-3 text-gray-900">{companyName || '—'}</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="w-1/3 px-4 py-3 font-medium text-gray-700">Email</td>
+                    <td className="px-4 py-3 text-gray-900">{contactEmail || '—'}</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="w-1/3 px-4 py-3 font-medium text-gray-700">Contact number</td>
+                    <td className="px-4 py-3 text-gray-900">{contactNumber || '—'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <section className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">Company Name</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSettingsLoading || isSavingSettings}
+                />
+              </section>
+              <section className="sm:col-span-1">
+                <label className="mb-2 block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSettingsLoading || isSavingSettings}
+                />
+              </section>
+              <section className="sm:col-span-1">
+                <label className="mb-2 block text-sm font-medium text-gray-700">Contact number</label>
+                <input
+                  type="tel"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSettingsLoading || isSavingSettings}
+                />
+              </section>
+            </section>
+          </section>
         </SettingsCard>
 
         {isSuperAdmin ? (
@@ -352,21 +455,21 @@ export default function Settings() {
                 <p className="font-medium text-gray-900">New Appointment Notifications</p>
                 <p className="text-sm text-gray-600">Receive emails when new appointments are booked</p>
               </div>
-              <Toggle defaultChecked />
+              <Toggle checked={emailNotificationsEnabled} disabled />
             </div>
             <div className="flex items-center justify-between gap-6">
               <div>
                 <p className="font-medium text-gray-900">New Lead Notifications</p>
                 <p className="text-sm text-gray-600">Get notified about new leads</p>
               </div>
-              <Toggle defaultChecked />
+              <Toggle checked={emailNotificationsEnabled} disabled />
             </div>
             <div className="flex items-center justify-between gap-6">
               <div>
                 <p className="font-medium text-gray-900">Newsletter Subscription Notifications</p>
                 <p className="text-sm text-gray-600">Alert on new newsletter subscribers</p>
               </div>
-              <Toggle />
+              <Toggle checked={emailNotificationsEnabled} disabled />
             </div>
           </div>
         </SettingsCard>
@@ -413,14 +516,18 @@ export default function Settings() {
                 <p className="font-medium text-gray-900">Auto-create Lead from Appointment</p>
                 <p className="text-sm text-gray-600">Automatically create a lead when a user books an appointment</p>
               </div>
-              <Toggle defaultChecked />
+              <Toggle
+                checked={autoCreateLeadFromAppointment}
+                onChange={(e) => setAutoCreateLeadFromAppointment(Boolean(e.target.checked))}
+                disabled={isSettingsLoading || isSavingSettings}
+              />
             </div>
             <div className="flex items-center justify-between gap-6">
               <div>
                 <p className="font-medium text-gray-900">Auto Follow-up Reminders</p>
                 <p className="text-sm text-gray-600">Send automatic follow-up reminders for leads</p>
               </div>
-              <Toggle defaultChecked />
+              <Toggle checked={autoFollowupRemindersEnabled} disabled />
             </div>
           </div>
         </SettingsCard>
@@ -428,10 +535,12 @@ export default function Settings() {
         <div className="flex justify-end">
           <button
             type="button"
-            className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 text-white shadow-sm transition-all hover:from-amber-600 hover:to-amber-700"
+            className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 text-white shadow-sm transition-all hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleSaveSettings}
+            disabled={isSettingsLoading || isSavingSettings}
           >
             <Save className="h-5 w-5" />
-            Save All Changes
+            {isSavingSettings ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </section>
