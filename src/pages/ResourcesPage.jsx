@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import Section from '../components/layout/Section'
@@ -12,9 +12,65 @@ import {
   ResourceTypeTab,
   VideoCard,
 } from '../components/ui/ResourcesComponents'
+import { listPublicArticles } from '../api/articles'
+import { listPublicDatasheets } from '../api/datasheets'
+import { listPublicInfoVideos } from '../api/infoVideos'
+
+function formatDate(dateValue) {
+  if (!dateValue) return ''
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue)
+  if (Number.isNaN(d.getTime())) return String(dateValue)
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+function makeExcerpt(content, maxLen = 150) {
+  const v = String(content || '').replace(/\s+/g, ' ').trim()
+  if (!v) return ''
+  if (v.length <= maxLen) return v
+  return `${v.slice(0, maxLen - 1).trim()}…`
+}
+
+function formatMonthYear(dateValue) {
+  if (!dateValue) return ''
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+function formatBytes(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = n
+  let idx = 0
+  while (size >= 1024 && idx < units.length - 1) {
+    size /= 1024
+    idx += 1
+  }
+  const digits = idx === 0 ? 0 : size >= 10 ? 1 : 2
+  return `${size.toFixed(digits)} ${units[idx]}`
+}
 
 export default function ResourcesPage() {
   const [activeType, setActiveType] = useState('articles')
+  const [articles, setArticles] = useState([])
+  const [isLoadingArticles, setIsLoadingArticles] = useState(false)
+  const [articlesError, setArticlesError] = useState('')
+  const [articlesPage, setArticlesPage] = useState(1)
+  const [articlesPageSize, setArticlesPageSize] = useState(20)
+  const [articlesTotal, setArticlesTotal] = useState(0)
+  const [datasheets, setDatasheets] = useState([])
+  const [isLoadingDatasheets, setIsLoadingDatasheets] = useState(false)
+  const [datasheetsError, setDatasheetsError] = useState('')
+  const [datasheetsPage, setDatasheetsPage] = useState(1)
+  const [datasheetsPageSize, setDatasheetsPageSize] = useState(20)
+  const [datasheetsTotal, setDatasheetsTotal] = useState(0)
+  const [videos, setVideos] = useState([])
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false)
+  const [videosError, setVideosError] = useState('')
+  const [videosPage, setVideosPage] = useState(1)
+  const [videosPageSize, setVideosPageSize] = useState(20)
+  const [videosTotal, setVideosTotal] = useState(0)
 
   const resourceTypes = useMemo(
     () => [
@@ -30,90 +86,161 @@ export default function ResourcesPage() {
     []
   )
 
-  const resources = useMemo(
-    () => [
-      {
-        tag: 'Security',
-        date: 'May 15, 2026',
-        readTime: '• 8 min read',
-        title: 'Industry Best Practices 2026',
-        description: 'Comprehensive guide to modern security standards and implementation strategies.',
-      },
-      {
-        tag: 'Strategy',
-        date: 'April 22, 2026',
-        readTime: '• 12 min read',
-        title: 'Digital Transformation Guide',
-        description: 'Essential strategies for successfully navigating digital transformation in your organization.',
-      },
-      {
-        tag: 'Technology',
-        date: 'March 30, 2026',
-        readTime: '• 10 min read',
-        title: 'Cloud Infrastructure Optimization',
-        description: 'Best practices for optimizing cloud infrastructure and reducing operational costs.',
-      },
-    ],
-    []
-  )
+  useEffect(() => {
+    const timeoutId = window.setTimeout(async () => {
+      setArticlesError('')
+      setIsLoadingArticles(true)
+      try {
+        const res = await listPublicArticles({ page: 1 })
+        setArticles(Array.isArray(res?.articles) ? res.articles : [])
+        setArticlesPage(Number(res?.page || 1) || 1)
+        setArticlesPageSize(Number(res?.pageSize || 20) || 20)
+        setArticlesTotal(Number(res?.total || 0) || 0)
+      } catch (err) {
+        setArticlesError(err?.message || 'Failed to load articles')
+        setArticles([])
+        setArticlesTotal(0)
+      } finally {
+        setIsLoadingArticles(false)
+      }
 
-  const datasheets = useMemo(
-    () => [
-      {
-        icon: images.resourcesPage.datasheets.enterpriseIcon,
-        title: 'Enterprise Security Suite',
-        description:
-          'Complete technical specifications and feature breakdown for our enterprise security solution.',
-        pages: '12 pages',
-        size: '2.4 MB',
-        month: 'May 2026',
-      },
-      {
-        icon: images.resourcesPage.datasheets.networkIcon,
-        title: 'Network Infrastructure Solutions',
-        description: 'Detailed overview of network infrastructure capabilities and deployment options.',
-        pages: '8 pages',
-        size: '1.8 MB',
-        month: 'April 2026',
-      },
-      {
-        icon: images.resourcesPage.datasheets.managedIcon,
-        title: 'Managed Services Overview',
-        description: 'Comprehensive breakdown of managed services offerings and support levels.',
-        pages: '10 pages',
-        size: '2.1 MB',
-        month: 'March 2026',
-      },
-    ],
-    []
-  )
+      setDatasheetsError('')
+      setIsLoadingDatasheets(true)
+      try {
+        const res = await listPublicDatasheets({ page: 1 })
+        const list = Array.isArray(res?.datasheets) ? res.datasheets : []
+        setDatasheets(
+          list.map((d) => ({
+            id: d.id,
+            icon: images.resourcesPage.datasheets.enterpriseIcon,
+            title: d.title,
+            description: d.description || '—',
+            size: formatBytes(d.size) || '—',
+            month: formatMonthYear(d.date_created) || '—',
+            filePath: d.file_path,
+          }))
+        )
+        setDatasheetsPage(Number(res?.page || 1) || 1)
+        setDatasheetsPageSize(Number(res?.pageSize || 20) || 20)
+        setDatasheetsTotal(Number(res?.total || 0) || 0)
+      } catch (err) {
+        setDatasheetsError(err?.message || 'Failed to load datasheets')
+        setDatasheets([])
+        setDatasheetsTotal(0)
+      } finally {
+        setIsLoadingDatasheets(false)
+      }
 
-  const videos = useMemo(
-    () => [
-      {
-        thumbnail: images.resourcesPage.videos.gettingStartedThumb,
-        duration: '5:32',
-        title: 'Getting Started with Black Bear Solutions',
-        description: 'Introduction to our platform and key features overview.',
-        views: '2.4K views',
-      },
-      {
-        thumbnail: images.resourcesPage.videos.bestPracticesThumb,
-        duration: '12:18',
-        title: 'Security Implementation Best Practices',
-        description: 'Step-by-step guide to implementing enterprise security measures.',
-        views: '1.8K views',
-      },
-      {
-        thumbnail: images.resourcesPage.videos.advancedConfigThumb,
-        duration: '15:45',
-        title: 'Advanced Configuration Tutorial',
-        description: 'Deep dive into advanced configuration options and customization.',
-        views: '1.2K views',
-      },
-    ],
-    []
-  )
+      setVideosError('')
+      setIsLoadingVideos(true)
+      try {
+        const res = await listPublicInfoVideos({ page: 1 })
+        const list = Array.isArray(res?.videos) ? res.videos : []
+        setVideos(
+          list.map((v) => ({
+            id: v.id,
+            thumbnail: images.resourcesPage.videos.gettingStartedThumb,
+            duration: '',
+            title: v.title,
+            description: v.description || '—',
+          }))
+        )
+        setVideosPage(Number(res?.page || 1) || 1)
+        setVideosPageSize(Number(res?.pageSize || 20) || 20)
+        setVideosTotal(Number(res?.total || 0) || 0)
+      } catch (err) {
+        setVideosError(err?.message || 'Failed to load videos')
+        setVideos([])
+        setVideosTotal(0)
+      } finally {
+        setIsLoadingVideos(false)
+      }
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  const loadMoreArticles = async () => {
+    if (isLoadingArticles) return
+    const nextPage = articlesPage + 1
+    if (articles.length >= articlesTotal) return
+
+    setArticlesError('')
+    setIsLoadingArticles(true)
+    try {
+      const res = await listPublicArticles({ page: nextPage })
+      const list = Array.isArray(res?.articles) ? res.articles : []
+      setArticles((prev) => [...prev, ...list])
+      setArticlesPage(Number(res?.page || nextPage) || nextPage)
+      setArticlesPageSize(Number(res?.pageSize || articlesPageSize) || articlesPageSize)
+      setArticlesTotal(Number(res?.total || articlesTotal) || articlesTotal)
+    } catch (err) {
+      setArticlesError(err?.message || 'Failed to load articles')
+    } finally {
+      setIsLoadingArticles(false)
+    }
+  }
+
+  const loadMoreDatasheets = async () => {
+    if (isLoadingDatasheets) return
+    const nextPage = datasheetsPage + 1
+    if (datasheets.length >= datasheetsTotal) return
+
+    setDatasheetsError('')
+    setIsLoadingDatasheets(true)
+    try {
+      const res = await listPublicDatasheets({ page: nextPage })
+      const list = Array.isArray(res?.datasheets) ? res.datasheets : []
+      setDatasheets((prev) => [
+        ...prev,
+        ...list.map((d) => ({
+          id: d.id,
+          icon: images.resourcesPage.datasheets.enterpriseIcon,
+          title: d.title,
+          description: d.description || '—',
+          size: formatBytes(d.size) || '—',
+          month: formatMonthYear(d.date_created) || '—',
+          filePath: d.file_path,
+        })),
+      ])
+      setDatasheetsPage(Number(res?.page || nextPage) || nextPage)
+      setDatasheetsPageSize(Number(res?.pageSize || datasheetsPageSize) || datasheetsPageSize)
+      setDatasheetsTotal(Number(res?.total || datasheetsTotal) || datasheetsTotal)
+    } catch (err) {
+      setDatasheetsError(err?.message || 'Failed to load datasheets')
+    } finally {
+      setIsLoadingDatasheets(false)
+    }
+  }
+
+  const loadMoreVideos = async () => {
+    if (isLoadingVideos) return
+    const nextPage = videosPage + 1
+    if (videos.length >= videosTotal) return
+
+    setVideosError('')
+    setIsLoadingVideos(true)
+    try {
+      const res = await listPublicInfoVideos({ page: nextPage })
+      const list = Array.isArray(res?.videos) ? res.videos : []
+      setVideos((prev) => [
+        ...prev,
+        ...list.map((v) => ({
+          id: v.id,
+          thumbnail: images.resourcesPage.videos.gettingStartedThumb,
+          duration: '',
+          title: v.title,
+          description: v.description || '—',
+        })),
+      ])
+      setVideosPage(Number(res?.page || nextPage) || nextPage)
+      setVideosPageSize(Number(res?.pageSize || videosPageSize) || videosPageSize)
+      setVideosTotal(Number(res?.total || videosTotal) || videosTotal)
+    } catch (err) {
+      setVideosError(err?.message || 'Failed to load videos')
+    } finally {
+      setIsLoadingVideos(false)
+    }
+  }
 
   return (
     <>
@@ -165,22 +292,127 @@ export default function ResourcesPage() {
           </div>
 
           {activeType === 'datasheets' ? (
-            <MasonryColumns className="mt-10">
-              {datasheets.map((sheet) => (
-                <DatasheetCard key={sheet.title} {...sheet} />
-              ))}
-            </MasonryColumns>
+            <div className="mt-10">
+              {datasheetsError ? (
+                <section className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {datasheetsError}
+                </section>
+              ) : null}
+
+              {isLoadingDatasheets ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  Loading datasheets...
+                </section>
+              ) : null}
+
+              {!isLoadingDatasheets && !datasheetsError && datasheets.length === 0 ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  No datasheets yet.
+                </section>
+              ) : null}
+
+              <MasonryColumns className="mt-6">
+                {datasheets.map((sheet) => (
+                  <DatasheetCard key={sheet.id ?? sheet.title} {...sheet} />
+                ))}
+              </MasonryColumns>
+
+              {datasheets.length < datasheetsTotal ? (
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={loadMoreDatasheets}
+                    disabled={isLoadingDatasheets}
+                    className="rounded-[10px] border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-[#101828] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingDatasheets ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : activeType === 'videos' ? (
-            <MasonryColumns className="mt-10">
-              {videos.map((video) => (
-                <VideoCard key={video.title} {...video} />
-              ))}
-            </MasonryColumns>
+            <div className="mt-10">
+              {videosError ? (
+                <section className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {videosError}
+                </section>
+              ) : null}
+
+              {isLoadingVideos ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  Loading videos...
+                </section>
+              ) : null}
+
+              {!isLoadingVideos && !videosError && videos.length === 0 ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  No videos yet.
+                </section>
+              ) : null}
+
+              <MasonryColumns className="mt-6">
+                {videos.map((video) => (
+                  <VideoCard key={video.id ?? video.title} {...video} />
+                ))}
+              </MasonryColumns>
+
+              {videos.length < videosTotal ? (
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={loadMoreVideos}
+                    disabled={isLoadingVideos}
+                    className="rounded-[10px] border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-[#101828] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingVideos ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="mt-10 flex flex-col gap-6">
-              {resources.map((resource) => (
-                <ResourceArticleCard key={`${resource.title}-${resource.date}`} {...resource} />
+              {articlesError ? (
+                <section className="rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {articlesError}
+                </section>
+              ) : null}
+
+              {isLoadingArticles ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  Loading articles...
+                </section>
+              ) : null}
+
+              {!isLoadingArticles && !articlesError && articles.length === 0 ? (
+                <section className="rounded-[10px] border border-gray-200 bg-white p-6 text-sm text-gray-600">
+                  No articles yet.
+                </section>
+              ) : null}
+
+              {articles.map((article) => (
+                <ResourceArticleCard
+                  key={article.id}
+                  tag={article.category}
+                  date={formatDate(article.publish_date) || '—'}
+                  readTime="• 10 min read"
+                  title={article.title}
+                  description={makeExcerpt(article.content) || '—'}
+                  to={`/resources/articles/${article.url_slug}`}
+                />
               ))}
+
+              {articles.length < articlesTotal ? (
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={loadMoreArticles}
+                    disabled={isLoadingArticles}
+                    className="rounded-[10px] border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-[#101828] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingArticles ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
           </Section>

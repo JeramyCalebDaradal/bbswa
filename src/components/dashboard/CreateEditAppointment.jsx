@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Calendar, Clock, Mail, MapPin, Save, User, X } from 'lucide-react'
 
-export default function CreateEditAppointment({ onClose, onSave, appointment, mode }) {
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+export default function CreateEditAppointment({ onClose, onSave, appointment, mode, isSaving = false }) {
   const services = useMemo(
     () => [
       'Security Assessment',
@@ -9,11 +13,6 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
       'Compliance Consultation',
       'Annual Security Review',
       'Risk Assessment',
-      'Incident Response Planning',
-      'Security Training',
-      'GDPR Compliance',
-      'General Consultation',
-      'Other',
     ],
     []
   )
@@ -24,7 +23,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
     clientName: '',
     email: '',
     phone: '',
-    date: '',
+    date: mode === 'create' ? todayISO() : '',
     time: '',
     status: 'pending',
     service: '',
@@ -35,6 +34,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
   })
 
   const [errors, setErrors] = useState({})
+  const [submitError, setSubmitError] = useState('')
 
   const validate = () => {
     const next = {}
@@ -49,11 +49,16 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
     return Object.keys(next).length === 0
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e?.preventDefault?.()
     if (!validate()) return
-    onSave(formData)
-    onClose()
+    setSubmitError('')
+    try {
+      await onSave(formData)
+      onClose()
+    } catch (err) {
+      setSubmitError(err?.message || 'Failed to save appointment')
+    }
   }
 
   return (
@@ -72,14 +77,20 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
           <button
             type="button"
             onClick={submit}
-            className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-white transition-all hover:from-amber-600 hover:to-amber-700"
+            disabled={isSaving}
+            className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-white transition-all hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
-            {mode === 'create' ? 'Create Appointment' : 'Update Appointment'}
+            {isSaving ? 'Saving...' : mode === 'create' ? 'Create Appointment' : 'Update Appointment'}
           </button>
         </div>
 
         <form onSubmit={submit} className="flex-1 overflow-y-auto p-8">
+          {submitError ? (
+            <section className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {submitError}
+            </section>
+          ) : null}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
               <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
@@ -94,6 +105,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                     type="text"
                     value={formData.clientName}
                     onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    disabled={isSaving}
                     className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                       errors.clientName ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -109,6 +121,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isSaving}
                       className={`w-full rounded-lg border py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                         errors.email ? 'border-red-500' : 'border-gray-200'
                       }`}
@@ -123,6 +136,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    disabled={isSaving}
                     className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                       errors.phone ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -144,6 +158,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                   <select
                     value={formData.service}
                     onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                    disabled={isSaving}
                     className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                       errors.service ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -164,6 +179,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    disabled={isSaving}
                     className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                       errors.date ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -179,6 +195,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                       type="time"
                       value={formData.time}
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                      disabled={isSaving}
                       className={`w-full rounded-lg border py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                         errors.time ? 'border-red-500' : 'border-gray-200'
                       }`}
@@ -192,6 +209,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                   <select
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: Number.parseInt(e.target.value, 10) })}
+                    disabled={isSaving}
                     className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     {durations.map((duration) => (
@@ -210,6 +228,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                       type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      disabled={isSaving}
                       className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
@@ -226,6 +245,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
                           value={s}
                           checked={formData.status === s}
                           onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          disabled={isSaving}
                           className="h-4 w-4 text-amber-600"
                         />
                         <span className="capitalize text-gray-700">{s}</span>
@@ -241,6 +261,7 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                disabled={isSaving}
                 rows={4}
                 className="w-full resize-none rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -251,4 +272,3 @@ export default function CreateEditAppointment({ onClose, onSave, appointment, mo
     </div>
   )
 }
-

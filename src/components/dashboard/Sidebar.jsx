@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -8,14 +8,60 @@ import {
   CalendarDays,
   Mail,
   BarChart3,
+  ClipboardList,
   Settings,
+  User,
   LogOut,
   Menu,
   X,
 } from 'lucide-react'
+import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
+import { roleAllowsDashboardSection } from '../../auth/session'
+import { useToast } from '../ui/useToast'
+
+function getUserLastName(user) {
+  if (!user || typeof user !== 'object') return ''
+  if (typeof user.last_name === 'string' && user.last_name.trim()) {
+    return user.last_name.trim()
+  }
+  const name = typeof user.name === 'string' ? user.name.trim() : ''
+  if (!name) return ''
+  const parts = name.split(/\s+/).filter(Boolean)
+  return parts.length ? String(parts[parts.length - 1]).trim() : ''
+}
+
+function truncateWithEllipsis(value, maxLength) {
+  const v = String(value || '')
+  if (!v) return ''
+  if (v.length <= maxLength) return v
+  if (maxLength <= 3) return v.slice(0, maxLength)
+  return `${v.slice(0, maxLength - 3)}...`
+}
+
+function getUserInitials(user) {
+  const lastName = getUserLastName(user)
+  if (lastName) {
+    return String(lastName[0] || 'U').toUpperCase()
+  }
+  const email = typeof user?.email === 'string' ? user.email.trim() : ''
+  return (email[0] || 'U').toUpperCase()
+}
 
 export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, setIsMobileOpen }) {
   const navigate = useNavigate()
+  const toast = useToast()
+  const [user, setUser] = useState(() => readUser())
+
+  useEffect(() => {
+    return subscribeAuthChange(() => setUser(readUser()))
+  }, [])
+
+  const displayName = useMemo(() => truncateWithEllipsis(getUserLastName(user) || 'User', 14), [user])
+  const email = useMemo(() => {
+    const emailRaw = typeof user?.email === 'string' && user.email.trim() ? user.email.trim() : ''
+    return emailRaw ? truncateWithEllipsis(emailRaw, 14) : ''
+  }, [user])
+  const initials = useMemo(() => getUserInitials(user), [user])
 
   useEffect(() => {
     const onResize = () => {
@@ -28,8 +74,7 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
   }, [isMobileOpen, setIsMobileOpen])
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('user')
+    clearSession()
     navigate('/login')
   }
 
@@ -37,11 +82,13 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'blog', label: 'Blog / Articles', icon: FileText },
+    { id: 'content', label: 'Blog / Articles', icon: FileText },
     { id: 'events', label: 'Events', icon: CalendarDays },
     { id: 'newsletter', label: 'Newsletter', icon: Mail },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'logs', label: 'Logging', icon: ClipboardList },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'profile-settings', label: 'Profile settings', icon: User },
   ]
 
   const SidebarContent = ({ showClose }) => (
@@ -73,19 +120,76 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
         {menuItems.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
+          const allowed = roleAllowsDashboardSection(user?.role, item.id)
+
+          if (item.id === 'content') {
+            const children = [
+              { id: 'blog', label: 'Articles' },
+              { id: 'datasheets', label: 'Datasheets' },
+              { id: 'info-videos', label: 'Informational Video' },
+            ]
+
+            return (
+              <section key={item.id} className="px-3">
+                <div className="flex items-center gap-3 px-3 py-3 text-gray-400">
+                  <Icon className="h-5 w-5" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+                <div className="pb-2">
+                  {children.map((child) => {
+                    const childAllowed = roleAllowsDashboardSection(user?.role, child.id)
+                    const childActive = activeSection === child.id
+                    return (
+                      <button
+                        key={child.id}
+                        type="button"
+                        onClick={() => {
+                          if (!childAllowed) {
+                            toast.error("You don't have access to this page.")
+                            return
+                          }
+                          onSectionChange(child.id)
+                          if (window.innerWidth < 768) {
+                            setIsMobileOpen(false)
+                          }
+                        }}
+                        disabled={!childAllowed}
+                        className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
+                          !childAllowed
+                            ? 'cursor-not-allowed text-gray-600 opacity-50'
+                            : childActive
+                            ? 'bg-white/5 text-amber-400'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{child.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          }
 
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => {
+                if (!allowed) {
+                  toast.error("You don't have access to this page.")
+                  return
+                }
                 onSectionChange(item.id)
                 if (window.innerWidth < 768) {
                   setIsMobileOpen(false)
                 }
               }}
+              disabled={!allowed}
               className={`flex w-full items-center gap-3 px-6 py-3 transition-all ${
-                isActive
+                !allowed
+                  ? 'cursor-not-allowed text-gray-600 opacity-50'
+                  : isActive
                   ? 'border-l-4 border-amber-500 bg-gradient-to-r from-amber-500/20 to-transparent text-amber-400'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -100,11 +204,11 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
       <div className="border-t border-[#2a2d3e] p-6">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gray-600 to-gray-700">
-            <span className="text-xs font-medium leading-none text-white">AD</span>
+            <span className="text-xs font-medium leading-none text-white">{initials}</span>
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-white">Admin User</p>
-            <p className="text-xs text-gray-500">admin@blackbear.com</p>
+            <p className="text-sm font-medium text-white">{displayName}</p>
+            {email ? <p className="text-xs text-gray-500">{email}</p> : null}
           </div>
 
           <button

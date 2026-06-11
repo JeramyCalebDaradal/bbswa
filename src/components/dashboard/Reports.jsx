@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -12,49 +13,45 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Calendar, FileText, Mail, TrendingUp, Users } from 'lucide-react'
+import { Calendar, FileText, TrendingUp, Users } from 'lucide-react'
+import { getReports } from '../../api/reports'
 
 export default function Reports() {
-  const appointmentData = [
-    { month: 'Jan', completed: 38, cancelled: 5, pending: 8 },
-    { month: 'Feb', completed: 45, cancelled: 7, pending: 6 },
-    { month: 'Mar', completed: 42, cancelled: 4, pending: 9 },
-    { month: 'Apr', completed: 52, cancelled: 6, pending: 7 },
-    { month: 'May', completed: 48, cancelled: 5, pending: 10 },
-    { month: 'Jun', completed: 55, cancelled: 3, pending: 12 },
-  ]
+  const [report, setReport] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const leadConversionData = [
-    { month: 'Jan', leads: 32, converted: 8 },
-    { month: 'Feb', leads: 41, converted: 12 },
-    { month: 'Mar', leads: 38, converted: 10 },
-    { month: 'Apr', leads: 45, converted: 15 },
-    { month: 'May', leads: 52, converted: 18 },
-    { month: 'Jun', leads: 58, converted: 22 },
-  ]
+  useEffect(() => {
+    const timeoutId = window.setTimeout(async () => {
+      setIsLoading(true)
+      setError('')
+      try {
+        const res = await getReports()
+        setReport(res?.report || null)
+      } catch (err) {
+        setError(err?.message || 'Failed to load reports')
+        setReport(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }, 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
-  const subscriberGrowthData = [
-    { month: 'Jan', subscribers: 850 },
-    { month: 'Feb', subscribers: 920 },
-    { month: 'Mar', subscribers: 1010 },
-    { month: 'Apr', subscribers: 1105 },
-    { month: 'May', subscribers: 1180 },
-    { month: 'Jun', subscribers: 1247 },
-  ]
+  const colors = useMemo(() => ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6'], [])
 
-  const blogPerformanceData = [
-    { category: 'Best Practices', views: 4230, color: '#f59e0b' },
-    { category: 'Compliance', views: 3180, color: '#3b82f6' },
-    { category: 'Threat Intel', views: 2890, color: '#10b981' },
-    { category: 'Resources', views: 5620, color: '#8b5cf6' },
-  ]
+  const appointmentData = Array.isArray(report?.appointmentData) ? report.appointmentData : []
+  const leadConversionData = Array.isArray(report?.leadConversionData) ? report.leadConversionData : []
+  const registrationTrendData = Array.isArray(report?.registrationTrendData) ? report.registrationTrendData : []
+  const blogPerformanceData = Array.isArray(report?.blogPerformanceData)
+    ? report.blogPerformanceData.map((row, index) => ({ ...row, color: colors[index % colors.length] }))
+    : []
+  const eventRegistrationData = Array.isArray(report?.eventRegistrationData) ? report.eventRegistrationData : []
 
-  const eventRegistrationData = [
-    { event: 'Cybersecurity Webinar', registered: 45, attended: 38 },
-    { event: 'GDPR Workshop', registered: 32, attended: 28 },
-    { event: 'Incident Response', registered: 28, attended: 25 },
-    { event: 'Security Summit', registered: 156, attended: 142 },
-  ]
+  const completionRate = Number(report?.kpis?.completionRate || 0)
+  const leadConversionRate = Number(report?.kpis?.leadConversionRate || 0)
+  const eventRegistrationsTotal = Number(report?.kpis?.eventRegistrationsTotal || 0)
+  const publishedArticlesTotal = Number(report?.kpis?.publishedArticlesTotal || 0)
 
   return (
     <section className="space-y-6">
@@ -62,6 +59,13 @@ export default function Reports() {
         <h2 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h2>
         <p className="mt-1 text-gray-600">Track performance metrics and business insights</p>
       </section>
+
+      {error ? (
+        <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</section>
+      ) : null}
+      {isLoading ? (
+        <section className="rounded-xl border border-gray-100 bg-white p-4 text-sm text-gray-600 shadow-sm">Loading reports...</section>
+      ) : null}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -71,7 +75,7 @@ export default function Reports() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Completion Rate</p>
-              <p className="text-xl font-semibold text-gray-900">89%</p>
+              <p className="text-xl font-semibold text-gray-900">{Math.round(completionRate)}%</p>
             </div>
           </div>
         </div>
@@ -83,7 +87,7 @@ export default function Reports() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Lead Conversion</p>
-              <p className="text-xl font-semibold text-gray-900">38%</p>
+              <p className="text-xl font-semibold text-gray-900">{Math.round(leadConversionRate)}%</p>
             </div>
           </div>
         </div>
@@ -91,11 +95,11 @@ export default function Reports() {
         <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600">
-              <Mail className="h-5 w-5 text-white" />
+              <Users className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Subscriber Growth</p>
-              <p className="text-xl font-semibold text-gray-900">+18%</p>
+              <p className="text-sm text-gray-600">Event Registrations</p>
+              <p className="text-xl font-semibold text-gray-900">{eventRegistrationsTotal.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -106,8 +110,8 @@ export default function Reports() {
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Avg. Blog Views</p>
-              <p className="text-xl font-semibold text-gray-900">1,284</p>
+              <p className="text-sm text-gray-600">Published Articles</p>
+              <p className="text-xl font-semibold text-gray-900">{publishedArticlesTotal.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -126,6 +130,7 @@ export default function Reports() {
               <YAxis stroke="#6b7280" />
               <Tooltip />
               <Bar dataKey="completed" fill="#10b981" />
+              <Bar dataKey="confirmed" fill="#3b82f6" />
               <Bar dataKey="cancelled" fill="#ef4444" />
               <Bar dataKey="pending" fill="#f59e0b" />
             </BarChart>
@@ -151,16 +156,16 @@ export default function Reports() {
 
         <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Subscriber Growth</h3>
-            <Mail className="h-5 w-5 text-green-500" />
+            <h3 className="text-lg font-semibold text-gray-900">Event Registration Trend</h3>
+            <Users className="h-5 w-5 text-green-500" />
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={subscriberGrowthData}>
+            <LineChart data={registrationTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip />
-              <Line type="monotone" dataKey="subscribers" stroke="#10b981" strokeWidth={3} />
+              <Line type="monotone" dataKey="registered" stroke="#10b981" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
         </section>
@@ -177,9 +182,9 @@ export default function Reports() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ category, views }) => `${category}: ${views}`}
+                label={({ category, value }) => `${category}: ${value}`}
                 outerRadius={80}
-                dataKey="views"
+                dataKey="value"
               >
                 {blogPerformanceData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -200,11 +205,9 @@ export default function Reports() {
             <YAxis stroke="#6b7280" />
             <Tooltip />
             <Bar dataKey="registered" fill="#3b82f6" />
-            <Bar dataKey="attended" fill="#10b981" />
           </BarChart>
         </ResponsiveContainer>
       </section>
     </section>
   )
 }
-

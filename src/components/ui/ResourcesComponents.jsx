@@ -1,4 +1,5 @@
 import { images } from '../../assets/images'
+import { Link } from 'react-router-dom'
 
 const hoverCardClassName =
   'cursor-pointer transition-transform transition-shadow duration-200 hover:translate-y-[-2px] hover:shadow-[0px_6px_18px_rgba(0,0,0,0.12)]'
@@ -49,7 +50,7 @@ export function ResourceTypeTab({
   )
 }
 
-export function ResourceArticleCard({ tag, date, readTime, title, description }) {
+export function ResourceArticleCard({ tag, date, readTime, title, description, to }) {
   return (
     <article
       className={`${hoverCardClassName} rounded-[10px] bg-white p-6 shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]`}
@@ -64,12 +65,21 @@ export function ResourceArticleCard({ tag, date, readTime, title, description })
         </div>
 
         <div className="flex justify-start sm:justify-end">
-          <button
-            type="button"
-            className="h-10 w-[111px] cursor-pointer rounded bg-[#FD9D0F] text-base font-medium leading-6 text-white transition-colors hover:bg-[#ffb13b]"
-          >
-            Read More
-          </button>
+          {to ? (
+            <Link
+              to={to}
+              className="inline-flex h-10 w-[111px] cursor-pointer items-center justify-center rounded bg-[#FD9D0F] text-base font-medium leading-6 text-white transition-colors hover:bg-[#ffb13b]"
+            >
+              Read More
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="h-10 w-[111px] cursor-pointer rounded bg-[#FD9D0F] text-base font-medium leading-6 text-white transition-colors hover:bg-[#ffb13b]"
+            >
+              Read More
+            </button>
+          )}
         </div>
       </div>
 
@@ -79,7 +89,9 @@ export function ResourceArticleCard({ tag, date, readTime, title, description })
   )
 }
 
-export function DatasheetCard({ icon, title, description, pages, size, month }) {
+export function DatasheetCard({ icon, title, description, pages, size, month, filePath }) {
+  const meta = [pages, size, month].filter(Boolean)
+  const hasDownload = Boolean(filePath && String(filePath).trim())
   return (
     <article
       className={`${hoverCardClassName} mb-6 break-inside-avoid rounded-[10px] bg-white p-5 shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)] sm:p-6`}
@@ -93,28 +105,35 @@ export function DatasheetCard({ icon, title, description, pages, size, month }) 
           <h3 className="text-lg font-semibold leading-7 text-[#101828]">{title}</h3>
           <p className="mt-2 text-sm leading-5 text-[#4A5565]">{description}</p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm leading-4 text-[#6A7282]">
-            <span>{pages}</span>
-            <span aria-hidden="true">•</span>
-            <span>{size}</span>
-            <span aria-hidden="true">•</span>
-            <span>{month}</span>
-          </div>
+          {meta.length ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm leading-4 text-[#6A7282]">
+              {meta.map((item, idx) => (
+                <span key={`${item}_${idx}`} className="inline-flex items-center gap-3">
+                  <span>{item}</span>
+                  {idx < meta.length - 1 ? <span aria-hidden="true">•</span> : null}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
-          <button
-            type="button"
-            className="mt-4 inline-flex cursor-pointer items-center gap-2 text-sm font-medium leading-5 text-[#FF6900] transition-colors hover:text-[#F54900] hover:underline"
-          >
-            <img src={images.resourcesPage.datasheets.downloadIcon} alt="" className="h-4 w-4 object-contain" />
-            Download PDF
-          </button>
+          {hasDownload ? (
+            <a
+              href={String(filePath)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex cursor-pointer items-center gap-2 text-sm font-medium leading-5 text-[#FF6900] transition-colors hover:text-[#F54900] hover:underline"
+            >
+              <img src={images.resourcesPage.datasheets.downloadIcon} alt="" className="h-4 w-4 object-contain" />
+              Download PDF
+            </a>
+          ) : null}
         </div>
       </div>
     </article>
   )
 }
 
-export function VideoCard({ thumbnail, duration, title, description, views }) {
+export function VideoCard({ thumbnail, duration, title, description }) {
   return (
     <article
       className={`${hoverCardClassName} mb-6 break-inside-avoid overflow-hidden rounded-[10px] bg-white shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]`}
@@ -129,15 +148,16 @@ export function VideoCard({ thumbnail, duration, title, description, views }) {
           </div>
         </div>
 
-        <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs leading-4 text-white">
-          {duration}
-        </div>
+        {duration ? (
+          <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs leading-4 text-white">
+            {duration}
+          </div>
+        ) : null}
       </div>
 
       <div className="p-4 sm:p-5">
         <h3 className="text-lg font-semibold leading-7 text-[#101828]">{title}</h3>
         <p className="mt-2 text-sm leading-5 text-[#4A5565]">{description}</p>
-        <p className="mt-3 text-xs leading-4 text-[#6A7282]">{views}</p>
       </div>
     </article>
   )

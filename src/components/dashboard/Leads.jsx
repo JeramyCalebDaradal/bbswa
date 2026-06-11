@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react'
-import { Filter, Mail, Phone, Search, User } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Filter, Mail, Phone, Search } from 'lucide-react'
+import { createLead, deleteLead, listLeads, updateLead } from '../../api/leads'
+import { readUser } from '../../auth/session'
+import CreateEditLead from './CreateEditLead'
+import { useToast } from '../ui/useToast'
 
 function StatusBadge({ status }) {
   const styles = {
@@ -10,96 +14,164 @@ function StatusBadge({ status }) {
     lost: { bg: 'bg-gray-100', text: 'text-gray-700' },
   }
 
-  const style = styles[status] || styles.new
+  const key = String(status || 'new').toLowerCase()
+  const style = styles[key] || styles.new
 
   return (
     <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${style.bg} ${style.text}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {key.charAt(0).toUpperCase() + key.slice(1)}
     </span>
   )
 }
 
+function formatDateOnly(value) {
+  if (!value) return ''
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  const v = String(value)
+  if (v.includes('T')) return v.split('T')[0]
+  const m = v.match(/^(\d{4}-\d{2}-\d{2})/)
+  return m ? m[1] : v
+}
+
+function truncateText(value, maxChars = 60) {
+  const v = String(value || '')
+  if (!v) return ''
+  const n = Number(maxChars)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  if (v.length <= n) return v
+  return `${v.slice(0, n).trimEnd()}...`
+}
+
 export default function Leads() {
+  const toast = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
 
-  const leads = useMemo(
-    () => [
-      {
-        id: 1,
-        name: 'Alex Thompson',
-        email: 'alex.t@corporation.com',
-        phone: '+1 (555) 111-2222',
-        source: 'Website Contact',
-        status: 'new',
-        followUpDate: '2026-06-05',
-        notes: 'Interested in enterprise security solutions',
-      },
-      {
-        id: 2,
-        name: 'Jennifer Martinez',
-        email: 'j.martinez@startup.com',
-        phone: '+1 (555) 222-3333',
-        source: 'Event Registration',
-        status: 'contacted',
-        followUpDate: '2026-06-08',
-        notes: 'Attended cybersecurity webinar, needs compliance help',
-      },
-      {
-        id: 3,
-        name: 'Robert Park',
-        email: 'robert.p@business.io',
-        phone: '+1 (555) 333-4444',
-        source: 'Newsletter Signup',
-        status: 'qualified',
-        followUpDate: '2026-06-10',
-        notes: 'Large organization, budget approved for Q3',
-      },
-      {
-        id: 4,
-        name: 'Maria Garcia',
-        email: 'm.garcia@tech.com',
-        phone: '+1 (555) 444-5555',
-        source: 'Referral',
-        status: 'converted',
-        followUpDate: '2026-06-15',
-        notes: 'Converted to client - signed annual contract',
-      },
-      {
-        id: 5,
-        name: 'James Wilson',
-        email: 'james.w@company.net',
-        phone: '+1 (555) 555-6666',
-        source: 'LinkedIn',
-        status: 'lost',
-        followUpDate: '',
-        notes: 'Chose competitor, budget constraints',
-      },
-    ],
-    []
-  )
+  const [leads, setLeads] = useState([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      const needle = searchTerm.toLowerCase()
-      const matchesSearch =
-        lead.name.toLowerCase().includes(needle) ||
-        lead.email.toLowerCase().includes(needle) ||
-        lead.source.toLowerCase().includes(needle)
+  const [showModal, setShowModal] = useState(false)
+  const [editingLead, setEditingLead] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
 
-      const matchesFilter = filterStatus === 'all' || lead.status === filterStatus
-      return matchesSearch && matchesFilter
-    })
-  }, [filterStatus, leads, searchTerm])
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const totalPages = useMemo(() => {
+    const t = Number(total || 0)
+    const s = Number(pageSize || 20)
+    if (!Number.isFinite(t) || t <= 0) return 1
+    if (!Number.isFinite(s) || s <= 0) return 1
+    return Math.max(1, Math.ceil(t / s))
+  }, [pageSize, total])
+
+  const refresh = async ({ nextPage } = {}) => {
+    setError('')
+    setIsLoading(true)
+    try {
+      const targetPage = Number.isFinite(Number(nextPage)) && Number(nextPage) > 0 ? Math.trunc(Number(nextPage)) : page
+      const res = await listLeads({ page: targetPage, status: filterStatus, q: searchTerm })
+      const rows = Array.isArray(res?.leads) ? res.leads : []
+      setPage(Number(res?.page || targetPage) || targetPage)
+      setPageSize(Number(res?.pageSize || 20) || 20)
+      setTotal(Number(res?.total || 0) || 0)
+      setLeads(
+        rows.map((row) => ({
+          id: row.id,
+          fullName: row.full_name,
+          email: row.email,
+          contact: row.contact,
+          source: row.source,
+          status: String(row.status || 'new').toLowerCase(),
+          followUp: formatDateOnly(row.follow_up),
+          notes: row.notes || '',
+          createdAt: row.created_at,
+          addedBy: row.added_by,
+        }))
+      )
+    } catch (err) {
+      setError(err?.message || 'Failed to load leads')
+      setLeads([])
+      setTotal(0)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      refresh()
+    }, searchTerm ? 300 : 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [filterStatus, page, searchTerm])
+
+  const handleSaveLead = async (leadData) => {
+    setIsSaving(true)
+    setError('')
+    try {
+      const payload = {
+        full_name: leadData.fullName,
+        email: leadData.email,
+        contact: leadData.contact,
+        source: leadData.source,
+        status: leadData.status,
+        follow_up: leadData.followUp || null,
+        notes: leadData.notes,
+      }
+
+      if (editingLead?.id) {
+        await updateLead(editingLead.id, payload)
+        await refresh()
+        toast.success('Lead updated successfully.')
+        return
+      }
+
+      const user = readUser()
+      const addedBy = user?.id
+      if (!addedBy) {
+        throw new Error('Missing logged-in user')
+      }
+
+      await createLead({ ...payload, added_by: addedBy })
+      await refresh({ nextPage: 1 })
+      toast.success('Lead created successfully.')
+    } catch (err) {
+      const message = err?.message || 'Failed to save lead'
+      toast.error(message)
+      throw err
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteEditingLead = async () => {
+    if (!editingLead?.id) return
+    setIsDeleting(true)
+    setError('')
+    try {
+      await deleteLead(editingLead.id)
+      await refresh()
+      toast.success('Lead deleted successfully.')
+    } catch (err) {
+      const message = err?.message || 'Failed to delete lead'
+      toast.error(message)
+      throw err
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const stats = useMemo(
     () => [
-      { label: 'Total Leads', value: leads.length },
+      { label: 'Total Leads', value: total },
       { label: 'New', value: leads.filter((l) => l.status === 'new').length },
       { label: 'Qualified', value: leads.filter((l) => l.status === 'qualified').length },
       { label: 'Converted', value: leads.filter((l) => l.status === 'converted').length },
     ],
-    [leads]
+    [leads, total]
   )
 
   return (
@@ -111,6 +183,10 @@ export default function Leads() {
         </div>
         <button
           type="button"
+          onClick={() => {
+            setEditingLead(null)
+            setShowModal(true)
+          }}
           className="cursor-pointer rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-white shadow-sm transition-all hover:from-amber-600 hover:to-amber-700"
         >
           + Add Lead
@@ -132,9 +208,12 @@ export default function Leads() {
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search leads..."
+              placeholder="Search by name or email..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setPage(1)
+              }}
               className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
@@ -142,7 +221,10 @@ export default function Leads() {
             <Filter className="h-5 w-5 text-gray-400" />
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value)
+                setPage(1)
+              }}
               className="rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="all">All Status</option>
@@ -157,6 +239,12 @@ export default function Leads() {
       </section>
 
       <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+        {error ? (
+          <section className="border-b border-red-200 bg-red-50 px-6 py-3 text-sm text-red-700">{error}</section>
+        ) : null}
+        {isLoading ? (
+          <section className="border-b border-gray-100 bg-white px-6 py-3 text-sm text-gray-600">Loading leads...</section>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-gray-100 bg-gray-50">
@@ -175,15 +263,10 @@ export default function Leads() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredLeads.map((lead) => (
+              {leads.map((lead) => (
                 <tr key={lead.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-gray-200 to-gray-300">
-                        <User className="h-5 w-5 text-gray-600" />
-                      </div>
-                      <p className="font-medium text-gray-900">{lead.name}</p>
-                    </div>
+                    <p className="font-medium text-gray-900">{lead.fullName}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="space-y-1">
@@ -193,7 +276,7 @@ export default function Leads() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Phone className="h-4 w-4" />
-                        {lead.phone}
+                        {lead.contact}
                       </div>
                     </div>
                   </td>
@@ -204,14 +287,21 @@ export default function Leads() {
                     <StatusBadge status={lead.status} />
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm text-gray-900">{lead.followUpDate || 'N/A'}</p>
+                    <p className="text-sm text-gray-900">{lead.followUp || 'N/A'}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="max-w-xs truncate text-sm text-gray-600">{lead.notes}</p>
+                    <p className="text-sm text-gray-600">{truncateText(lead.notes, 60)}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <button type="button" className="text-sm font-medium text-amber-600 hover:text-amber-700">
-                      Edit
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLead(lead)
+                        setShowModal(true)
+                      }}
+                      className="text-sm font-medium text-amber-600 hover:text-amber-700"
+                    >
+                      View Details
                     </button>
                   </td>
                 </tr>
@@ -220,7 +310,57 @@ export default function Leads() {
           </table>
         </div>
       </section>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-gray-600">
+          Page {page} of {totalPages} • {total} total
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, Number(p || 1) - 1))}
+            disabled={isLoading || page <= 1}
+            className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, Number(p || 1) + 1))}
+            disabled={isLoading || page >= totalPages}
+            className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Next
+          </button>
+        </div>
+      </section>
+      {showModal ? (
+        <CreateEditLead
+          mode={editingLead?.id ? 'edit' : 'create'}
+          lead={
+            editingLead?.id
+              ? {
+                  id: editingLead.id,
+                  fullName: editingLead.fullName,
+                  email: editingLead.email,
+                  contact: editingLead.contact,
+                  source: editingLead.source,
+                  status: editingLead.status,
+                  followUp: editingLead.followUp,
+                  notes: editingLead.notes,
+                }
+              : null
+          }
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+          onClose={() => {
+            setShowModal(false)
+            setEditingLead(null)
+          }}
+          onSave={handleSaveLead}
+          onDelete={handleDeleteEditingLead}
+        />
+      ) : null}
     </section>
   )
 }
-

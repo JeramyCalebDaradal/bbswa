@@ -14,7 +14,18 @@ import {
 } from 'lucide-react'
 
 function formatDate(dateString) {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  const v = String(dateString || '').trim()
+  let d
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) {
+    const year = Number(m[1])
+    const month = Number(m[2]) - 1
+    const day = Number(m[3])
+    d = new Date(year, month, day)
+  } else {
+    d = new Date(v)
+  }
+  return d.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -232,25 +243,8 @@ export default function AppointmentDetails({ appointment, onClose, onEdit, onSta
 
         <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
           <p className="text-sm text-gray-500">Created: {new Date().toLocaleDateString()}</p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100"
-            >
-              Close
-            </button>
-            <button
-              type="button"
-              onClick={() => onEdit(appointment)}
-              className="cursor-pointer rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-white transition-all hover:from-amber-600 hover:to-amber-700"
-            >
-              Edit Appointment
-            </button>
-          </div>
         </div>
       </div>
     </div>
   )
 }
-

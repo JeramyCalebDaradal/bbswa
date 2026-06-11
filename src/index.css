@@ -17,12 +17,18 @@
 
   body {
     @apply m-0 font-sans text-bbs-dark antialiased;
-    -webkit-user-select: none;
-    user-select: none;
   }
 
   img {
     @apply max-w-full;
+  }
+
+  body[data-deterrence="on"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body[data-deterrence="on"] img {
     -webkit-user-drag: none;
     user-select: none;
     pointer-events: none;
