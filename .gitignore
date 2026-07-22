@@ -28,3 +28,4 @@ dashboard_temp_to_integrate/*
 *.sw?
 
 bbswebsite.tar
+.env
