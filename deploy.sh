@@ -5,7 +5,7 @@ IMAGE_NAME="bbswebsite"
 CONTAINER_NAME="bbsfrontend"
 SHA="$1"
 REGISTRY_DIR="$2"
-VERSION_FILE="${REGISTRY_DIR}/.deploy-versions"
+VERSION_FILE="${REGISTRY_DIR}/.deploy-versions-frontend"
 NETWORK_NAME="bbsnet"
 
 echo "=== Loading new image ==="
