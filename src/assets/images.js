@@ -1,17 +1,18 @@
 const asset = (name) => `/assets/${name}`
 
 export const images = {
-  heroBg: asset('hero-bg.jpg'),
-  servicesHeroBg: asset('services-hero-bg.jpg'),
-  servicesGlobeBg: asset('services-globe-bg.png'),
-  serviceDetailHeroDefault: asset('service-detail-hero-default.jpg'),
-  serviceDetailHeroDfir: asset('service-detail-hero-dfir.jpg'),
+  heroBg: asset('hero-bg-1500w.webp'),
+  servicesHeroBg: asset('services-hero-bg-1500w.webp'),
+  servicesGlobeBg: asset('services-globe-bg-1500w.webp'),
+  serviceDetailHeroDefault: asset('service-detail-hero-default-1500w.webp'),
+  serviceDetailHeroDfir: asset('service-detail-hero-dfir-1500w.webp'),
   serviceTargetIcon: asset('service-target-icon.png'),
   serviceBenefitsIcon: asset('service-benefits-icon.png'),
   serviceFeaturesIcon: asset('service-features-icon.png'),
   watchVideo: asset('watch-video.png'),
+  aboutHero: asset('about-1500w.webp'),
   logo: asset('logo.png'),
-  globe: asset('globe.png'),
+  globe: asset('globe-1500w.webp'),
   partnership: asset('partnership.jpg'),
   check: asset('check.png'),
   star: asset('star.png'),
@@ -57,7 +58,7 @@ export const images = {
     asset('partner-icons/alliance-12.png'),
   ],
   avatars: [asset('avatar-1.png'), asset('avatar-2.png')],
-  blog: [asset('blog-1.jpg'), asset('blog-2.jpg'), asset('blog-3.jpg')],
+  blog: [asset('blog-1-1500w.webp'), asset('blog-2-1500w.webp'), asset('blog-3-1500w.webp')],
   blogCalendar: asset('blog-calendar.png'),
   blogUser: asset('blog-user.png'),
   underline: asset('underline-accent.png'),
@@ -73,7 +74,7 @@ export const images = {
   serviceBenefitsIcon: asset('services-assets/benefit.png'),
   serviceFeaturesIcon: asset('services-assets/feature.png'),
   partnersPage: {
-    heroBg: asset('partners-page/partner-hero-bg.jpg'),
+    heroBg: asset('partners-page/partner-hero-bg-1500w.webp'),
     distributorProgram: asset('partners-page/distributor-partner-program.png'),
     premiumProgram: asset('partners-page/premium-partner-program.png'),
     preferedProgram: asset('partners-page/prefered-partner-program.png'),
@@ -84,7 +85,7 @@ export const images = {
     success: asset('partners-page/success.png'),
   },
   resourcesPage: {
-    heroBg: asset('resources-page/resources-hero-bg.png'),
+    heroBg: asset('resources-page/resources-hero-bg-1500w.webp'),
     iconArticles: asset('resources-page/resources-icon-articles.png'),
     iconDatasheets: asset('resources-page/resources-icon-datasheets.png'),
     iconVideos: asset('resources-page/resources-icon-videos.png'),
@@ -102,13 +103,7 @@ export const images = {
     },
   },
   eventsPage: {
-    heroBg: asset('events-page/events-hero-bg.png'),
-    upcoming: {
-      cybersecuritySummit: asset('events-page/event-cybersecurity-summit.png'),
-      cloudWebinar: asset('events-page/event-cloud-webinar.png'),
-      networkWorkshop: asset('events-page/event-network-workshop.png'),
-      digitalRoundtable: asset('events-page/event-digital-roundtable.png'),
-    },
+    heroBg: asset('events-page/events-hero-bg-1498w.webp'),
     icons: {
       calendar: asset('events-page/event-icon-calendar.png'),
       clock: asset('events-page/event-icon-clock.png'),
@@ -119,7 +114,7 @@ export const images = {
     },
   },
   careerPage: {
-    heroBg: asset('career-page/career-hero-bg.png'),
+    heroBg: asset('career-page/career-hero-bg-1500w.webp'),
     icons: {
       collaborative: asset('career-page/icons/career-icon-collaborative.png'),
       growth: asset('career-page/icons/career-icon-growth.png'),

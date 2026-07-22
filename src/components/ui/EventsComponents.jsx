@@ -65,14 +65,27 @@ export function EventCard({
   variant = 'standard',
 }) {
   const isFeatured = variant === 'featured'
+  const src = String(image || '').trim()
 
   return (
     <article
       className={`${hoverCardClassName} overflow-hidden rounded-[10px] border border-[#E5E7EB] bg-white shadow-[0px_4px_6px_-4px_rgba(0,0,0,0.1),0px_10px_15px_-3px_rgba(0,0,0,0.1)]`}
     >
       <div className={isFeatured ? 'grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]' : ''}>
-        <div className={isFeatured ? 'relative aspect-[16/9] lg:aspect-auto lg:h-full' : 'relative aspect-[16/9]'}>
-          <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className={`${isFeatured ? 'lg:aspect-auto lg:h-full' : ''} relative aspect-[16/9] bg-[#E5E7EB]`}>
+          {src ? (
+            <img
+              src={src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+              width="640"
+              height="360"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          ) : null}
           {imageBadge ? (
             <div className="absolute right-4 top-4 rounded bg-white/90 px-3 py-1 text-xs font-semibold leading-4 text-[#101828]">
               {imageBadge}

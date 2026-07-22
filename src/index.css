@@ -41,3 +41,240 @@
     user-select: text;
   }
 }
+
+/* ── Rich Text Editor Styles ─────────────────────────────── */
+
+/* Tiptap editor content area */
+.tiptap {
+  > * + * {
+    margin-top: 0.75em;
+  }
+
+  /* Paragraphs */
+  p {
+    line-height: 1.7;
+    margin-bottom: 0.5em;
+  }
+
+  /* Arrow icon in editor */
+  span[data-editor-arrow] {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+
+  /* Headings — higher heading = tighter line-height */
+  h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.15; }
+  h2 { font-size: 1.5rem;  font-weight: 600; line-height: 1.2; }
+  h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.25; }
+  h4 { font-size: 1.125rem; font-weight: 600; line-height: 1.3; }
+  h5 { font-size: 1rem; font-weight: 600; line-height: 1.35; }
+  h6 { font-size: 0.875rem; font-weight: 600; line-height: 1.4; }
+
+  /* Blockquote */
+  blockquote {
+    border-left: 4px solid #f59e0b; /* amber-500 */
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    background: #fefce8;
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: #4b5563;
+    font-style: italic;
+
+    p { margin: 0; }
+  }
+
+  /* Lists */
+  ul, ol {
+    padding-left: 1.5em;
+
+    li { line-height: 1.7; }
+  }
+
+  /* Links */
+  a {
+    color: #2563eb;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover { color: #1d4ed8; }
+  }
+
+  /* Inline code */
+  code:not(pre code) {
+    background: #f3f4f6;
+    border-radius: 0.25rem;
+    padding: 0.15em 0.4em;
+    font-size: 0.875em;
+    color: #dc2626;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  }
+
+  /* Placeholder */
+  p.is-editor-empty:first-child::before {
+    color: #9ca3af;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* Selection highlight */
+  ::selection {
+    background: #fde68a;
+  }
+
+  /* Focus */
+  &:focus { outline: none; }
+}
+
+/* ── Code Block Syntax Highlighting Theme ─────────────────── */
+
+/* GitHub Dark Dimmed-inspired for code blocks */
+.tiptap pre {
+  background: #1e1e2e;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+  overflow-x: auto;
+  padding: 1em;
+  position: relative;
+
+  code {
+    background: none;
+    color: #cdd6f4;
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    padding: 0;
+    tab-size: 2;
+  }
+
+  /* line numbers via CSS counter */
+  .hljs-ln-numbers {
+    padding-right: 1em;
+    color: #6c7086;
+    user-select: none;
+  }
+}
+
+/* lowlight/highlight.js token colors (Catppuccin Mocha-inspired) */
+.hljs-keyword    { color: #cba6f7; }  /* purple */
+.hljs-string     { color: #a6e3a1; }  /* green */
+.hljs-number     { color: #fab387; }  /* peach */
+.hljs-comment    { color: #6c7086; font-style: italic; }  /* overlay */
+.hljs-function   { color: #89b4fa; }  /* blue */
+.hljs-title      { color: #89b4fa; }  /* blue */
+.hljs-built_in   { color: #f38ba8; }  /* red */
+.hljs-type       { color: #f9e2af; }  /* yellow */
+.hljs-literal    { color: #fab387; }  /* peach */
+.hljs-attr       { color: #89dceb; }  /* teal */
+.hljs-attribute  { color: #89dceb; }  /* teal */
+.hljs-property   { color: #89dceb; }  /* teal */
+.hljs-selector   { color: #cba6f7; }  /* purple */
+.hljs-variable   { color: #f38ba8; }  /* red */
+.hljs-regexp     { color: #f9e2af; }  /* yellow */
+.hljs-symbol     { color: #fab387; }  /* peach */
+.hljs-section    { color: #89b4fa; }  /* blue */
+.hljs-link       { color: #89b4fa; text-decoration: underline; }  /* blue */
+.hljs-meta       { color: #6c7086; }  /* overlay */
+.hljs-tag        { color: #cba6f7; }  /* purple */
+.hljs-name       { color: #cba6f7; }  /* purple */
+.hljs-deletion   { color: #f38ba8; background: #441a1a; }  /* red */
+.hljs-addition   { color: #a6e3a1; background: #1a3a1a; }  /* green */
+.hljs-params     { color: #cdd6f4; }  /* text */
+
+/* ── Article Preview Content Styles ────────────────────────── */
+
+.article-content {
+  line-height: 1.8;
+  color: #374151;
+
+  > * + * { margin-top: 1em; }
+
+  p { margin-bottom: 0.5em; }
+
+  /* Force line breaks to render */
+  br {
+    display: block;
+    height: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #111827;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  h1 { font-size: 1.75rem; line-height: 1.15; }
+  h2 { font-size: 1.5rem;  line-height: 1.2; }
+  h3 { font-size: 1.25rem; line-height: 1.25; }
+  h4 { font-size: 1.125rem; line-height: 1.3; }
+  h5 { font-size: 1rem; line-height: 1.35; }
+  h6 { font-size: 0.875rem; line-height: 1.4; }
+
+  blockquote {
+    border-left: 4px solid #f59e0b;
+    margin: 1em 0;
+    padding: 0.75em 1.25em;
+    background: #fefce8;
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: #4b5563;
+    font-style: italic;
+
+    p { margin: 0; }
+  }
+
+  pre {
+    background: #1e1e2e;
+    border-radius: 0.5rem;
+    margin: 1em 0;
+    overflow-x: auto;
+    padding: 1em;
+
+    code {
+      background: none;
+      color: #cdd6f4;
+      font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      padding: 0;
+    }
+  }
+
+  code:not(pre code) {
+    background: #f3f4f6;
+    border-radius: 0.25rem;
+    padding: 0.15em 0.4em;
+    font-size: 0.875em;
+    color: #dc2626;
+  }
+
+  a {
+    color: #2563eb;
+    text-decoration: underline;
+
+    &:hover { color: #1d4ed8; }
+  }
+
+  ul, ol {
+    padding-left: 1.5em;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 1.5em 0;
+  }
+
+  /* Arrow icon in preview */
+  span[data-editor-arrow] {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+}

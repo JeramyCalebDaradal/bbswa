@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, ChevronDown, Eye, MapPin, Paperclip, Plus, Search, Users } from 'lucide-react'
+import { Calendar, ChevronDown, Eye, Link2, MapPin, Plus, Search, Users } from 'lucide-react'
 import CreateEditEvent from './CreateEditEvent'
 import EventAttendeesModal from './EventAttendeesModal'
 import { createEvent, getEventAttendees, listEvents, updateEvent } from '../../api/events'
@@ -214,8 +214,8 @@ export default function Events() {
                       openRecording(evt)
                     }}
                   >
-                    <Paperclip className="h-4 w-4" />
-                    Attach recording
+                    <Link2 className="h-4 w-4" />
+                    URL recording
                   </button>
 
                   <div
@@ -354,7 +354,7 @@ export default function Events() {
           <section className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             <section className="flex items-start justify-between gap-4">
               <section>
-                <h3 className="text-xl font-semibold text-gray-900">Attach recording</h3>
+                <h3 className="text-xl font-semibold text-gray-900">URL recording</h3>
                 <p className="mt-1 text-sm text-gray-600">{recordingEvent.title}</p>
               </section>
               <button
@@ -369,7 +369,7 @@ export default function Events() {
 
             <section className="mt-5 space-y-4">
               <section>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Recording link</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Recording URL</label>
                 <input
                   type="url"
                   value={recordingDraft}

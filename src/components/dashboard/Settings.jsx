@@ -72,6 +72,7 @@ export default function Settings() {
   const [companyName, setCompanyName] = useState(() => String(website?.websiteSettings?.company_name || '').trim())
   const [contactEmail, setContactEmail] = useState(() => String(website?.websiteSettings?.contact_email || '').trim())
   const [contactNumber, setContactNumber] = useState(() => String(website?.websiteSettings?.contact_number || '').trim())
+  const [infoVideosEnabled, setInfoVideosEnabled] = useState(Boolean(website?.websiteSettings?.info_videos_enabled))
 
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false)
   const [autoCreateLeadFromAppointment, setAutoCreateLeadFromAppointment] = useState(false)
@@ -94,6 +95,7 @@ export default function Settings() {
       setCompanyName(String(s.company_name || '').trim())
       setContactEmail(String(s.contact_email || '').trim())
       setContactNumber(String(s.contact_number || '').trim())
+      setInfoVideosEnabled(Boolean(s.info_videos_enabled))
       setEmailNotificationsEnabled(Boolean(s.email_notifications_enabled))
       setAutoCreateLeadFromAppointment(Boolean(s.auto_create_lead_from_appointment))
       setAutoFollowupRemindersEnabled(Boolean(s.auto_followup_reminders_enabled))
@@ -114,6 +116,7 @@ export default function Settings() {
         company_name: companyName,
         contact_email: contactEmail,
         contact_number: contactNumber,
+        info_videos_enabled: infoVideosEnabled,
         auto_create_lead_from_appointment: autoCreateLeadFromAppointment,
       })
       const s = res?.settings
@@ -121,6 +124,7 @@ export default function Settings() {
         setCompanyName(String(s.company_name || '').trim())
         setContactEmail(String(s.contact_email || '').trim())
         setContactNumber(String(s.contact_number || '').trim())
+        setInfoVideosEnabled(Boolean(s.info_videos_enabled))
         setEmailNotificationsEnabled(Boolean(s.email_notifications_enabled))
         setAutoCreateLeadFromAppointment(Boolean(s.auto_create_lead_from_appointment))
         setAutoFollowupRemindersEnabled(Boolean(s.auto_followup_reminders_enabled))
@@ -128,6 +132,7 @@ export default function Settings() {
           company_name: String(s.company_name || '').trim(),
           contact_email: String(s.contact_email || '').trim(),
           contact_number: String(s.contact_number || '').trim(),
+          info_videos_enabled: Boolean(s.info_videos_enabled),
         })
       }
       toast.success('Settings updated')
@@ -373,6 +378,22 @@ export default function Settings() {
               </section>
             </section>
           </section>
+        </SettingsCard>
+
+        <SettingsCard icon={Eye} iconGradient="from-slate-500 to-slate-700" title="Website Features">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-6">
+              <div>
+                <p className="font-medium text-gray-900">Informational Videos</p>
+                <p className="text-sm text-gray-600">Show the Informational Videos tab on the Resources page</p>
+              </div>
+              <Toggle
+                checked={infoVideosEnabled}
+                onChange={(e) => setInfoVideosEnabled(Boolean(e.target.checked))}
+                disabled={isSettingsLoading || isSavingSettings}
+              />
+            </div>
+          </div>
         </SettingsCard>
 
         {isSuperAdmin ? (

@@ -7,6 +7,7 @@ function normalizeWebsiteSettings(value) {
     company_name: String(v.company_name || '').trim() || 'Black Bear Securities',
     contact_email: String(v.contact_email || '').trim() || 'concierge@blackbearsecurities.com',
     contact_number: String(v.contact_number || '').trim() || '63286837594',
+    info_videos_enabled: Boolean(v.info_videos_enabled),
   }
 }
 

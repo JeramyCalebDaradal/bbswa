@@ -85,18 +85,8 @@ export default function EventsPage() {
     return { upcomingEvents: upcomingRest, featuredEvent: featured, pastEvents: pastByNewestDate }
   }, [events])
 
-  const upcomingFallbackImages = useMemo(
-    () => [
-      images.eventsPage.upcoming.cybersecuritySummit,
-      images.eventsPage.upcoming.cloudWebinar,
-      images.eventsPage.upcoming.networkWorkshop,
-      images.eventsPage.upcoming.digitalRoundtable,
-    ],
-    []
-  )
-
   const mapEventToCard = (evt, index, variant) => {
-    const img = String(evt?.preview_image || '').trim() || upcomingFallbackImages[index % upcomingFallbackImages.length]
+    const img = String(evt?.preview_image || '').trim()
     const isOnline = String(evt?.location_type || '').toLowerCase() === 'online'
     const badge = isOnline ? 'Virtual' : 'In-Person'
     const tags = [{ label: evt.category, variant: isOnline ? 'blue' : 'purple' }]
@@ -158,7 +148,7 @@ export default function EventsPage() {
       <main>
         <section className="relative h-[507px] overflow-hidden bg-black text-white">
           <div className="absolute inset-0">
-            <img src={images.eventsPage.heroBg} alt="" className="h-full w-full object-cover opacity-55" />
+            <img src={images.eventsPage.heroBg} alt="" className="h-full w-full object-cover opacity-55" loading="eager" fetchpriority="high" width="1200" height="507" />
           </div>
 
           <div className="relative flex h-full flex-col">

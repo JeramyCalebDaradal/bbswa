@@ -79,7 +79,6 @@ export function roleAllowsDashboardSection(role, sectionId) {
   if (r === 'Super Admin') return true
   if (s === 'overview') return true
   if (s === 'profile-settings') return true
-
   const map = {
     'Content Manager': new Set(['blog', 'datasheets', 'info-videos', 'newsletter', 'events']),
     'Sales Agent': new Set(['leads', 'appointments']),

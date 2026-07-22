@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import Section from '../components/layout/Section'
@@ -7,6 +8,22 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import AccentUnderline from '../components/ui/AccentUnderline'
 import { images } from '../assets/images'
 import { getPublicArticleBySlug } from '../api/articles'
+
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'strong', 'em', 'u', 's', 'span', 'br', 'hr',
+    'blockquote', 'pre', 'code',
+    'a', 'ul', 'ol', 'li',
+    'sub', 'sup', 'mark', 'small', 'del', 'ins',
+    'svg', 'path',
+  ],
+  ALLOWED_ATTR: [
+    'href', 'target', 'rel', 'class', 'style', 'spellcheck', 'data-language', 'dir',
+    'xmlns', 'width', 'height', 'viewbox', 'fill', 'd',
+  ],
+  ALLOW_DATA_ATTR: ['data-language', 'data-editor-arrow'],
+}
 
 function formatDate(dateValue) {
   if (!dateValue) return ''
@@ -44,7 +61,7 @@ export default function ArticlePage() {
 
   const heroImage = useMemo(() => {
     const img = String(article?.featured_image || '').trim()
-    return img || images.blog?.[0] || ''
+    return img
   }, [article])
 
   const publishedDate = useMemo(() => formatDate(article?.publish_date), [article])
@@ -60,7 +77,20 @@ export default function ArticlePage() {
       <main className="min-h-screen bg-white">
         <section className="relative overflow-hidden bg-black text-white">
           <div className="absolute inset-0">
-            <img src={heroImage} alt="" className="h-full w-full object-cover opacity-55" />
+            {heroImage ? (
+              <img
+                src={heroImage}
+                alt=""
+                className="h-full w-full object-cover opacity-55"
+                loading="eager"
+                fetchpriority="high"
+                width="1200"
+                height="500"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            ) : null}
             <div className="absolute inset-0 bg-black/25" />
           </div>
 
@@ -116,12 +146,27 @@ export default function ArticlePage() {
                 </section>
               ) : null}
 
-              <section className="mt-8 overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]">
-                <img src={heroImage} alt={article.title || ''} className="h-[280px] w-full object-cover sm:h-[360px]" />
-              </section>
+              {heroImage ? (
+                <section className="mt-8 overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]">
+                  <img
+                    src={heroImage}
+                    alt={article.title || ''}
+                    className="h-[280px] w-full object-cover sm:h-[360px]"
+                    loading="lazy"
+                    width="800"
+                    height="360"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </section>
+              ) : null}
 
-              <section className="prose prose-slate mt-10 max-w-none">
-                <div className="whitespace-pre-wrap text-base leading-7 text-[#101828]">{String(article.content || '')}</div>
+              <section className="mt-10 max-w-none">
+                <div
+                  className="article-content text-base leading-7 text-[#101828]"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(String(article.content || ''), PURIFY_CONFIG) }}
+                />
               </section>
             </section>
           ) : null}

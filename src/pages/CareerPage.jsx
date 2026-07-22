@@ -104,7 +104,7 @@ export default function CareerPage() {
       <main>
         <section className="relative h-[507px] overflow-hidden bg-black text-white">
           <div className="absolute inset-0">
-            <img src={images.careerPage.heroBg} alt="" className="h-full w-full object-cover opacity-70" />
+            <img src={images.careerPage.heroBg} alt="" className="h-full w-full object-cover opacity-70" loading="eager" fetchpriority="high" width="1200" height="507" />
           </div>
 
           <div className="relative flex h-full flex-col">

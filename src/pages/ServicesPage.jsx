@@ -12,7 +12,7 @@ export default function ServicesPage() {
       <main>
         <section className="relative overflow-hidden bg-black text-white h-[500px]">
           <div className="absolute inset-0">
-            <img src={images.servicesHeroBg} alt="" className="h-full w-full object-cover" />
+            <img src={images.servicesHeroBg} alt="" className="h-full w-full object-cover" loading="eager" fetchpriority="high" width="1200" height="500" />
             <div className="absolute inset-0 bg-black/45" />
           </div>
 
@@ -36,7 +36,7 @@ export default function ServicesPage() {
 
         <section className="relative overflow-hidden bg-black py-14 sm:py-20">
           <div className="absolute inset-0 opacity-40">
-            <img src={images.servicesGlobeBg} alt="" className="h-full w-full object-cover" />
+            <img src={images.servicesGlobeBg} alt="" className="h-full w-full object-cover" loading="lazy" width="1200" height="600" />
           </div>
           <div className="relative mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-12">
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

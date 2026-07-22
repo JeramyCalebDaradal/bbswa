@@ -11,7 +11,7 @@ export default function HeroSection() {
       className="relative overflow-hidden bg-black text-white"
     >
       <div className="absolute inset-0">
-        <img src={images.heroBg} alt="" className="h-full w-full object-cover opacity-45" />
+        <img src={images.heroBg} alt="" className="h-full w-full object-cover opacity-45" loading="eager" fetchpriority="high" width="1200" height="800" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
       </div>
 

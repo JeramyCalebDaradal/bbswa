@@ -5,6 +5,7 @@ import FeatureCard from '../components/ui/FeatureCard'
 import SectionHeading from '../components/ui/SectionHeading'
 import AccentUnderline from '../components/ui/AccentUnderline'
 import { aboutFeatures, clientIndustries } from '../data/homeContent'
+import { images } from '../assets/images'
 
 const companyOverview = `Headquartered in Manila, Philippines, we have built our CORE competencies empowering our clients with advance technologies and practitioners that specializes on comprehensive background investigations, VIP security and counter measures, threat intelligence, physical security assessment, information security risk assessments, compliance implementations, authoring data privacy practices, digital forensics and incident response investigations, N/SOC and CSIRT design and build, VAPT on network, mobile and web applications, building an ERT for disaster recovery, command center implementations, IT service management and business continuity planning to ensure your peace of mind.`
 
@@ -28,9 +29,13 @@ export default function AboutPage() {
         <section className="relative h-[500px] overflow-hidden bg-black text-white">
           <div className="absolute inset-0">
             <img
-              src="assets/about.jpg"
+              src={images.aboutHero}
               alt=""
               className="h-full w-full object-cover object-[0%_20%] opacity-55"
+              loading="eager"
+              fetchpriority="high"
+              width="1200"
+              height="500"
             />
             <div className="absolute inset-0 bg-black/35" />
           </div>

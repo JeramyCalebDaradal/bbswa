@@ -1,3 +1,21 @@
+import DOMPurify from 'dompurify'
+
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'strong', 'em', 'u', 's', 'span', 'br', 'hr',
+    'blockquote', 'pre', 'code',
+    'a', 'ul', 'ol', 'li',
+    'sub', 'sup', 'mark', 'small', 'del', 'ins',
+    'svg', 'path',
+  ],
+  ALLOWED_ATTR: [
+    'href', 'target', 'rel', 'class', 'style', 'spellcheck', 'data-language', 'dir',
+    'xmlns', 'width', 'height', 'viewbox', 'fill', 'd',
+  ],
+  ALLOW_DATA_ATTR: ['data-language', 'data-editor-arrow'],
+}
+
 function formatDate(dateValue) {
   if (!dateValue) return ''
   const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
@@ -56,14 +74,27 @@ export default function ArticlePreview({ article }) {
         ) : null}
       </section>
 
-      {image ? (
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <img src={image} alt={title || 'Article image'} className="h-64 w-full object-cover sm:h-80" />
-        </section>
-      ) : null}
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-[#E5E7EB] shadow-sm">
+        {image ? (
+          <img
+            src={image}
+            alt={title || 'Article image'}
+            className="h-64 w-full object-cover sm:h-80"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        ) : (
+          <div className="h-64 w-full sm:h-80" />
+        )}
+      </section>
 
       <section className="rounded-xl border border-gray-100 bg-white p-6 text-sm leading-7 text-gray-800 shadow-sm">
-        <section className="whitespace-pre-wrap">{content || 'No content'}</section>
+        {content ? (
+          <section className="article-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, PURIFY_CONFIG) }} />
+        ) : (
+          <p className="text-gray-400">No content</p>
+        )}
       </section>
     </section>
   )

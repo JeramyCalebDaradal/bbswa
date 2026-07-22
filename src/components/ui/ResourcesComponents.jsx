@@ -133,13 +133,21 @@ export function DatasheetCard({ icon, title, description, pages, size, month, fi
   )
 }
 
-export function VideoCard({ thumbnail, duration, title, description }) {
+export function VideoCard({ thumbnail, duration, title, description, filePath }) {
+  const href = String(filePath || '').trim()
+  const isClickable = Boolean(href)
+  const Wrapper = isClickable ? 'a' : 'div'
+  const wrapperProps = isClickable
+    ? { href, target: '_blank', rel: 'noreferrer' }
+    : {}
   return (
-    <article
-      className={`${hoverCardClassName} mb-6 break-inside-avoid overflow-hidden rounded-[10px] bg-white shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]`}
-    >
+    <article className="mb-6 break-inside-avoid overflow-hidden rounded-[10px] bg-white shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]">
+      <Wrapper
+        {...wrapperProps}
+        className={`${hoverCardClassName} block ${isClickable ? '' : 'cursor-default'}`}
+      >
       <div className="relative aspect-[16/9] bg-[#E5E7EB]">
-        <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" width="640" height="360" />
         <div className="absolute inset-0 bg-black/30" />
 
         <div className="absolute inset-0 flex items-center justify-center">
@@ -159,6 +167,7 @@ export function VideoCard({ thumbnail, duration, title, description }) {
         <h3 className="text-lg font-semibold leading-7 text-[#101828]">{title}</h3>
         <p className="mt-2 text-sm leading-5 text-[#4A5565]">{description}</p>
       </div>
+      </Wrapper>
     </article>
   )
 }

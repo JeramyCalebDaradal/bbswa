@@ -26,6 +26,7 @@ import DashboardReportsPage from './pages/DashboardPages/DashboardReportsPage'
 import DashboardSettingsPage from './pages/DashboardPages/DashboardSettingsPage'
 import DashboardProfileSettingsPage from './pages/DashboardPages/DashboardProfileSettingsPage'
 import DashboardLogsPage from './pages/DashboardPages/DashboardLogsPage'
+import DashboardApiLogsPage from './pages/DashboardPages/DashboardApiLogsPage'
 import { useLocation } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import WebsiteSettingsProvider from './WebsiteSettingsProvider'
@@ -192,6 +193,7 @@ function App({ initialWebsiteSettings }) {
                 <Route path="newsletter" element={<DashboardNewsletterPage />} />
                 <Route path="reports" element={<DashboardReportsPage />} />
                 <Route path="logs" element={<DashboardLogsPage />} />
+                <Route path="api-logs" element={<DashboardApiLogsPage />} />
                 <Route path="settings" element={<DashboardSettingsPage />} />
                 <Route path="profile-settings" element={<DashboardProfileSettingsPage />} />
                 <Route path="*" element={<Navigate to="overview" replace />} />

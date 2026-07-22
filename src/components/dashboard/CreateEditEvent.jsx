@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Calendar, MapPin, Save, Tag, Upload, X } from 'lucide-react'
+import { Calendar, MapPin, Save, Tag, Upload, X, ImageIcon } from 'lucide-react'
+import { useToast } from '../ui/useToast'
 
 export default function CreateEditEvent({ mode, event, onClose, onSave, isSaving }) {
+  const toast = useToast()
   const [formData, setFormData] = useState({
     title: '',
     preview_image: '',
@@ -44,7 +46,9 @@ export default function CreateEditEvent({ mode, event, onClose, onSave, isSaving
       await onSave(normalized)
       onClose()
     } catch (err) {
-      setSubmitError(err?.message || 'Failed to save event')
+      const message = err?.message || 'Failed to save event'
+      setSubmitError(message)
+      toast.error(message)
     }
   }
 
@@ -100,8 +104,21 @@ export default function CreateEditEvent({ mode, event, onClose, onSave, isSaving
                   <p className="text-sm text-gray-500">Click to upload a preview image</p>
                 </label>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <img src={formData.preview_image} alt="Preview" className="h-56 w-full object-cover" />
+                <div className="group relative overflow-hidden rounded-lg border border-gray-200">
+                  <img src={formData.preview_image} alt="Preview" className="h-56 w-full object-cover" loading="lazy" width="800" height="225" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                    <label className="hidden cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-lg transition-all group-hover:inline-flex hover:bg-gray-100">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePreviewImageUpload}
+                        className="hidden"
+                        disabled={isSaving}
+                      />
+                      <ImageIcon className="h-4 w-4" />
+                      Change Image
+                    </label>
+                  </div>
                 </div>
               )}
             </section>

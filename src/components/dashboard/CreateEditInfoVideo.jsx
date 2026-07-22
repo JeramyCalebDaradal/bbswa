@@ -18,6 +18,7 @@ export default function CreateEditInfoVideo({
     title: '',
     description: '',
     filePath: '',
+    fileName: '',
     status: 'active',
     ...(video || {}),
   })
@@ -159,25 +160,38 @@ export default function CreateEditInfoVideo({
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (!file) return
-                          setFormData((prev) => ({
-                            ...prev,
-                            filePath: file.name,
-                          }))
+                          const reader = new FileReader()
+                          reader.onload = () => {
+                            const result = typeof reader.result === 'string' ? reader.result : ''
+                            setFormData((prev) => ({
+                              ...prev,
+                              fileName: file.name,
+                              filePath: result,
+                            }))
+                          }
+                          reader.onerror = () => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              fileName: '',
+                              filePath: '',
+                            }))
+                          }
+                          reader.readAsDataURL(file)
                         }}
                       />
                     </label>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">File path</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">File</label>
                       <input
                         type="text"
-                        value={formData.filePath}
-                        onChange={(e) => setFormData({ ...formData, filePath: e.target.value })}
+                        value={formData.fileName || (String(formData.filePath || '').trim().startsWith('data:') ? '' : formData.filePath)}
+                        onChange={(e) => setFormData({ ...formData, fileName: '', filePath: e.target.value })}
                         disabled={isSaving}
                         className={`w-full rounded-lg border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${
                           errors.filePath ? 'border-red-500' : 'border-gray-200'
                         }`}
-                        placeholder="example.mp4"
+                        placeholder="Paste a URL or select a video"
                       />
                       {errors.filePath ? <p className="mt-1 text-xs text-red-500">{errors.filePath}</p> : null}
                     </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/login.css'
 import { login } from '../api/auth'
 import { clearSession, setSession } from '../auth/session'
+import { setAccessToken } from '../api/client'
 import { useToast } from '../components/ui/useToast'
 import { images } from '../assets/images'
 
@@ -47,6 +48,13 @@ export default function LoginPage() {
         toast.error('Login failed: invalid user data returned')
         return
       }
+      // Store the new access token in-memory (token rotation system)
+      const newAccessToken = String(res?.accessToken || '').trim()
+      if (newAccessToken) {
+        setAccessToken(newAccessToken)
+      }
+
+      // Store legacy token data for backward compat (existing session checks)
       const tokenEnc = String(res?.token || '').trim()
       const tokenExpiresAt = String(res?.token_expires_at || '').trim()
       if (!tokenEnc || !tokenExpiresAt) {

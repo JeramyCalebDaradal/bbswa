@@ -42,7 +42,7 @@ export default function ServiceDetailPage() {
       <main>
         <section className="relative overflow-hidden bg-black text-white h-[500px]">
           <div className="absolute inset-0">
-            <img src={service.heroImage || images.serviceDetailHeroDefault} alt="" className="h-full w-full object-cover opacity-55" />
+            <img src={service.heroImage || images.serviceDetailHeroDefault} alt="" className="h-full w-full object-cover opacity-55" loading="eager" fetchpriority="high" width="1200" height="500" />
             <div className="absolute inset-0 bg-black/20" />
           </div>
 

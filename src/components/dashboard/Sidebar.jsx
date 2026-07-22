@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
 import { roleAllowsDashboardSection } from '../../auth/session'
+import { clearAccessToken, apiRequest } from '../../api/client'
 import { useToast } from '../ui/useToast'
 
 function getUserLastName(user) {
@@ -73,7 +74,13 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     return () => window.removeEventListener('resize', onResize)
   }, [isMobileOpen, setIsMobileOpen])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiRequest('/auth/logout', { method: 'POST' })
+    } catch {
+      // Silently ignore -- local session cleanup is sufficient
+    }
+    clearAccessToken()
     clearSession()
     navigate('/login')
   }
@@ -86,7 +93,7 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     { id: 'events', label: 'Events', icon: CalendarDays },
     { id: 'newsletter', label: 'Newsletter', icon: Mail },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'logs', label: 'Logging', icon: ClipboardList },
+    { id: 'logging', label: 'Logging', icon: ClipboardList },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'profile-settings', label: 'Profile settings', icon: User },
   ]
@@ -127,6 +134,54 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
               { id: 'blog', label: 'Articles' },
               { id: 'datasheets', label: 'Datasheets' },
               { id: 'info-videos', label: 'Informational Video' },
+            ]
+
+            return (
+              <section key={item.id} className="px-3">
+                <div className="flex items-center gap-3 px-3 py-3 text-gray-400">
+                  <Icon className="h-5 w-5" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+                <div className="pb-2">
+                  {children.map((child) => {
+                    const childAllowed = roleAllowsDashboardSection(user?.role, child.id)
+                    const childActive = activeSection === child.id
+                    return (
+                      <button
+                        key={child.id}
+                        type="button"
+                        onClick={() => {
+                          if (!childAllowed) {
+                            toast.error("You don't have access to this page.")
+                            return
+                          }
+                          onSectionChange(child.id)
+                          if (window.innerWidth < 768) {
+                            setIsMobileOpen(false)
+                          }
+                        }}
+                        disabled={!childAllowed}
+                        className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
+                          !childAllowed
+                            ? 'cursor-not-allowed text-gray-600 opacity-50'
+                            : childActive
+                            ? 'bg-white/5 text-amber-400'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{child.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          }
+
+          if (item.id === 'logging') {
+            const children = [
+              { id: 'logs', label: 'Action Logs' },
+              { id: 'api-logs', label: 'API Logs' },
             ]
 
             return (

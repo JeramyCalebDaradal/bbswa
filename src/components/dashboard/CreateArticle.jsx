@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Calendar, Eye, Save, Upload, X } from 'lucide-react'
+import { Calendar, Eye, Save, Upload, X, ImageIcon } from 'lucide-react'
 import ArticlePreview from './ArticlePreview'
+import RichTextEditor from '../editor/RichTextEditor'
 import { createArticle, updateArticle } from '../../api/articles'
 import { readUser } from '../../auth/session'
+import { useToast } from '../ui/useToast'
 
 function normalizeSlug(title) {
   return String(title || '')
@@ -34,6 +36,7 @@ function normalizeStatusLabel(value) {
 }
 
 export default function CreateArticle({ mode = 'create', article, onClose, onSaved }) {
+  const toast = useToast()
   const categories = useMemo(
     () => ['News', 'Blog', 'Security', 'Events', 'Best Practices', 'Compliance', 'Resources'],
     []
@@ -93,9 +96,12 @@ export default function CreateArticle({ mode = 'create', article, onClose, onSav
           : await createArticle(payload)
 
       onSaved?.(res.article)
+      toast.success(mode === 'edit' ? 'Article updated.' : 'Article created.')
       onClose()
     } catch (err) {
-      setSaveError(err?.message || 'Failed to save article')
+      const message = err?.message || 'Failed to save article'
+      setSaveError(message)
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }
@@ -247,20 +253,32 @@ export default function CreateArticle({ mode = 'create', article, onClose, onSav
                   <p className="text-sm text-gray-500">Drag & drop or click to browse</p>
                 </label>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <img src={featuredImage} alt="Featured" className="h-64 w-full object-cover" />
+                <div className="group relative overflow-hidden rounded-lg border border-gray-200">
+                  <img src={featuredImage} alt="Featured" className="h-64 w-full object-cover" loading="lazy" width="800" height="256" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                    <label className="hidden cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-lg transition-all group-hover:inline-flex hover:bg-gray-100">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={isSaving}
+                      />
+                      <ImageIcon className="h-4 w-4" />
+                      Change Image
+                    </label>
+                  </div>
                 </div>
               )}
             </section>
 
             <section>
               <label className="mb-2 block text-sm font-medium text-gray-700">Content</label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here..."
-                className="min-h-[320px] w-full resize-none rounded-lg border border-gray-200 p-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                disabled={isSaving}
+              <RichTextEditor
+                content={content}
+                onChange={(html) => setContent(html)}
+                minHeight={420}
+                editable={!isSaving}
               />
             </section>
 

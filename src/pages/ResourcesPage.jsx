@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../components/layout/Header'
 import Footer from '../components/layout/Footer'
 import Section from '../components/layout/Section'
@@ -15,6 +16,7 @@ import {
 import { listPublicArticles } from '../api/articles'
 import { listPublicDatasheets } from '../api/datasheets'
 import { listPublicInfoVideos } from '../api/infoVideos'
+import { useWebsiteSettings } from '../useWebsiteSettings'
 
 function formatDate(dateValue) {
   if (!dateValue) return ''
@@ -24,10 +26,12 @@ function formatDate(dateValue) {
 }
 
 function makeExcerpt(content, maxLen = 150) {
-  const v = String(content || '').replace(/\s+/g, ' ').trim()
-  if (!v) return ''
-  if (v.length <= maxLen) return v
-  return `${v.slice(0, maxLen - 1).trim()}…`
+  const raw = String(content || '')
+  // Strip HTML tags to get plain text
+  const plain = raw.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!plain) return ''
+  if (plain.length <= maxLen) return plain
+  return `${plain.slice(0, maxLen - 1).trim()}…`
 }
 
 function formatMonthYear(dateValue) {
@@ -52,7 +56,19 @@ function formatBytes(value) {
 }
 
 export default function ResourcesPage() {
-  const [activeType, setActiveType] = useState('articles')
+  const website = useWebsiteSettings()
+  const infoVideosEnabled = Boolean(website?.websiteSettings?.info_videos_enabled)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const initialType = useMemo(() => {
+    const sp = new URLSearchParams(location.search || '')
+    const t = String(sp.get('type') || '').trim().toLowerCase()
+    if (t === 'articles' || t === 'datasheets' || t === 'videos') return t
+    return 'articles'
+  }, [location.search])
+
+  const [activeType, setActiveType] = useState(initialType)
   const [articles, setArticles] = useState([])
   const [isLoadingArticles, setIsLoadingArticles] = useState(false)
   const [articlesError, setArticlesError] = useState('')
@@ -72,19 +88,35 @@ export default function ResourcesPage() {
   const [videosPageSize, setVideosPageSize] = useState(20)
   const [videosTotal, setVideosTotal] = useState(0)
 
-  const resourceTypes = useMemo(
-    () => [
+  useEffect(() => {
+    setActiveType(initialType)
+  }, [initialType])
+
+  const resourceTypes = useMemo(() => {
+    const types = [
       { key: 'articles', label: 'Articles', icon: images.resourcesPage.iconArticles },
       { key: 'datasheets', label: 'Datasheets', icon: images.resourcesPage.iconDatasheets },
-      {
+    ]
+
+    if (infoVideosEnabled) {
+      types.push({
         key: 'videos',
         label: 'Informational Videos',
         icon: images.resourcesPage.iconVideos,
         iconMaskSize: '120% 120%',
-      },
-    ],
-    []
-  )
+      })
+    }
+
+    return types
+  }, [infoVideosEnabled])
+
+  const setType = (nextType) => {
+    const t = String(nextType || '').trim().toLowerCase()
+    setActiveType(t)
+    const sp = new URLSearchParams(location.search || '')
+    sp.set('type', t)
+    navigate({ pathname: location.pathname, search: `?${sp.toString()}` }, { replace: true })
+  }
 
   useEffect(() => {
     const timeoutId = window.setTimeout(async () => {
@@ -143,6 +175,7 @@ export default function ResourcesPage() {
             duration: '',
             title: v.title,
             description: v.description || '—',
+            filePath: v.file_path,
           }))
         )
         setVideosPage(Number(res?.page || 1) || 1)
@@ -230,6 +263,7 @@ export default function ResourcesPage() {
           duration: '',
           title: v.title,
           description: v.description || '—',
+          filePath: v.file_path,
         })),
       ])
       setVideosPage(Number(res?.page || nextPage) || nextPage)
@@ -286,7 +320,7 @@ export default function ResourcesPage() {
                 label={type.label}
                 iconClassName={type.iconClassName}
                 iconMaskSize={type.iconMaskSize}
-                onClick={() => setActiveType(type.key)}
+                onClick={() => setType(type.key)}
               />
             ))}
           </div>
