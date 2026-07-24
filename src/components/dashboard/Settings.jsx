@@ -1,6 +1,6 @@
 import { Bell, Calendar, Eye, EyeOff, Globe, Save, Users as UsersIcon, X, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { createAdminUser, getAdminSettings, listRoles, listUsers, updateAdminSettings, updateAdminUser } from '../../api/admin'
+import { createAdminUser, getAdminSettings, listBbsUsers, listRoles, updateAdminSettings, updateAdminUser } from '../../api/admin'
 import { readUser } from '../../auth/session'
 import { useToast } from '../ui/useToast'
 import { useWebsiteSettings } from '../../useWebsiteSettings'
@@ -147,8 +147,8 @@ export default function Settings() {
     setUsersError('')
     setIsUsersLoading(true)
     try {
-      const res = await listUsers()
-      setAdminUsers(Array.isArray(res.users) ? res.users : [])
+      const res = await listBbsUsers()
+      setAdminUsers(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
       setUsersError(err?.message || 'Failed to load users')
       setAdminUsers([])
