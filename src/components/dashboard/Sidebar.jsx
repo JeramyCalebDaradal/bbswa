@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  ShieldCheck,
 } from 'lucide-react'
 import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
 import { roleAllowsDashboardSection } from '../../auth/session'
@@ -95,6 +96,8 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'logging', label: 'Logging', icon: ClipboardList },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'users', label: 'User Directory', icon: Users },
+    { id: 'role-config', label: 'Role Config', icon: ShieldCheck },
     { id: 'profile-settings', label: 'Profile settings', icon: User },
   ]
 

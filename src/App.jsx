@@ -13,6 +13,7 @@ import ArticlePage from './pages/ArticlePage'
 import CareerPage from './pages/CareerPage'
 import UnderConstructionPage from './pages/UnderConstructionPage'
 import LoginPage from './pages/LoginPage'
+import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import DashboardOverviewPage from './pages/DashboardPages/DashboardOverviewPage'
 import DashboardAppointmentsPage from './pages/DashboardPages/DashboardAppointmentsPage'
@@ -27,9 +28,12 @@ import DashboardSettingsPage from './pages/DashboardPages/DashboardSettingsPage'
 import DashboardProfileSettingsPage from './pages/DashboardPages/DashboardProfileSettingsPage'
 import DashboardLogsPage from './pages/DashboardPages/DashboardLogsPage'
 import DashboardApiLogsPage from './pages/DashboardPages/DashboardApiLogsPage'
+import DashboardUsersPage from './pages/DashboardPages/DashboardUsersPage'
+import DashboardRoleConfigPage from './pages/DashboardPages/DashboardRoleConfigPage'
 import { useLocation } from 'react-router-dom'
 import ToastProvider from './components/ui/ToastProvider'
 import WebsiteSettingsProvider from './WebsiteSettingsProvider'
+import MsalInitializer from './components/MsalInitializer'
 
 function isEditableTarget(target) {
   return target instanceof HTMLElement && Boolean(target.closest('input, textarea, [contenteditable="true"]'))
@@ -167,6 +171,7 @@ function App({ initialWebsiteSettings }) {
       <WebsiteSettingsProvider initialWebsiteSettings={initialWebsiteSettings}>
         <BrowserRouter>
           <ToastProvider>
+            <MsalInitializer />
             <DeterrenceMode />
             <ContentProtection />
             <ScrollToHash />
@@ -181,6 +186,7 @@ function App({ initialWebsiteSettings }) {
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/services/:slug" element={<ServiceDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/dashboard" element={<DashboardPage />}>
                 <Route index element={<Navigate to="overview" replace />} />
                 <Route path="overview" element={<DashboardOverviewPage />} />
@@ -196,6 +202,8 @@ function App({ initialWebsiteSettings }) {
                 <Route path="api-logs" element={<DashboardApiLogsPage />} />
                 <Route path="settings" element={<DashboardSettingsPage />} />
                 <Route path="profile-settings" element={<DashboardProfileSettingsPage />} />
+                <Route path="users" element={<DashboardUsersPage />} />
+                <Route path="role-config" element={<DashboardRoleConfigPage />} />
                 <Route path="*" element={<Navigate to="overview" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

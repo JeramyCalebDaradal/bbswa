@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../styles/login.css'
 import { login } from '../api/auth'
@@ -6,6 +6,7 @@ import { clearSession, setSession } from '../auth/session'
 import { setAccessToken } from '../api/client'
 import { useToast } from '../components/ui/useToast'
 import { images } from '../assets/images'
+import { loginRedirect } from '../auth/msal'
 
 async function sha256Hex(value) {
   const bytes = new TextEncoder().encode(String(value || ''))
@@ -17,61 +18,47 @@ async function sha256Hex(value) {
 export default function LoginPage() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [msalLoading, setMsalLoading] = useState(false)
 
-  const isValidUser = (user) => {
-    return (
-      user &&
-      typeof user === 'object' &&
-      typeof user.email === 'string' &&
-      user.email.trim().length > 0 &&
-      typeof user.role === 'string' &&
-      user.role.trim().length > 0
-    )
-  }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async (e) => {
+  const handleEmailLogin = useCallback(async (e) => {
     e.preventDefault()
-    setIsLoading(true)
+    if (!email || ! password) return
+    setLoading(true)
     try {
-      clearSession()
-      const passwordHash = await sha256Hex(formData.password)
-      const res = await login({ email: formData.email, password: passwordHash })
-      if (!isValidUser(res?.user)) {
-        clearSession()
-        toast.error('Login failed: invalid user data returned')
-        return
+      const passwordHash = await sha256Hex(password)
+      const res = await login({ email, password: passwordHash })
+      if (res.token && res.user) {
+        setAccessToken(res.token)
+        setSession(res.user, res.token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+        toast.success(`Welcome back, ${res.user.name || res.user.email}`)
+        navigate('/dashboard/overview', { replace: true })
+      } else {
+        toast.error('Invalid credentials')
       }
-      // Store the new access token in-memory (token rotation system)
-      const newAccessToken = String(res?.accessToken || '').trim()
-      if (newAccessToken) {
-        setAccessToken(newAccessToken)
-      }
-
-      // Store legacy token data for backward compat (existing session checks)
-      const tokenEnc = String(res?.token || '').trim()
-      const tokenExpiresAt = String(res?.token_expires_at || '').trim()
-      if (!tokenEnc || !tokenExpiresAt) {
-        clearSession()
-        toast.error('Login failed: missing session token')
-        return
-      }
-
-      setSession(res.user, tokenEnc, tokenExpiresAt)
-      navigate('/dashboard/overview')
     } catch (err) {
-      const message = err?.message || 'Invalid email or password'
-      toast.error(message)
+      console.error('Login error:', err)
+      toast.error(err.message || 'Login failed')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }
+  }, [email, password, navigate, toast])
+
+  const handleMsalLogin = useCallback(() => {
+    setMsalLoading(true)
+    try {
+      // Store the intended redirect path
+      sessionStorage.setItem('msalRedirectPath', '/dashboard/overview')
+      // Initiate redirect flow
+      loginRedirect()
+    } catch (err) {
+      console.error('MSAL login error:', err)
+      toast.error('Failed to start Microsoft sign-in')
+      setMsalLoading(false)
+    }
+  }, [toast])
 
   return (
     <div className="login-container">
@@ -82,50 +69,74 @@ export default function LoginPage() {
               <img src={images.logo} alt="Black Bear" className="login-logo" />
             </div>
 
-            <h1 className="login-title">Welcome back</h1>
-            <p className="login-subtitle">Sign in to your account to continue</p>
+            <h1 className="login-title">Welcome Back</h1>
+            <p className="login-subtitle">Sign in to access your dashboard</p>
 
-            <form onSubmit={handleSubmit} className="login-form">
+            {/* Microsoft Sign-In Button */}
+            <button
+              type="button"
+              className="login-microsoft-button"
+              onClick={handleMsalLogin}
+              disabled={msalLoading || loading}
+            >
+              <svg className="microsoft-icon" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20">
+                <path
+                  fill="currentColor"
+                  d="M1.25 1.25h10.5v10.5H1.25V1.25zm11.25 0h10.5v10.5H12.5V1.25zM1.25 12.5h10.5V23H1.25V12.5zm11.25 0h10.5V23H12.5V12.5z"
+                />
+              </svg>
+              <span>{msalLoading ? 'Redirecting...' : 'Sign in with Microsoft'}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="login-divider">
+              <span>or</span>
+            </div>
+
+            {/* Email/Password Form (Legacy) */}
+            <form className="login-form" onSubmit={handleEmailLogin}>
               <div className="login-field">
-                <label className="login-label" htmlFor="login-email">
-                  Email address
-                </label>
+                <label className="login-label" htmlFor="email">Email</label>
                 <input
-                  id="login-email"
                   type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="you@company.com"
-                  required
-                  disabled={isLoading}
+                  id="email"
                   className="login-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   autoComplete="email"
+                  required
+                  disabled={loading || msalLoading}
                 />
               </div>
 
               <div className="login-field">
-                <label className="login-label" htmlFor="login-password">
-                  Password
-                </label>
+                <label className="login-label" htmlFor="password">Password</label>
                 <input
-                  id="login-password"
                   type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  disabled={isLoading}
+                  id="password"
                   className="login-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
                   autoComplete="current-password"
+                  required
+                  disabled={loading || msalLoading}
                 />
               </div>
 
-              <button type="submit" disabled={isLoading} className="login-primary-button">
-                {isLoading ? 'Signing in...' : 'Sign in'}
+              <button
+                type="submit"
+                className="login-primary-button"
+                disabled={loading || msalLoading}
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
+
+            <p className="login-hint">
+              Use your Microsoft work account to sign in with SSO, or use your email and password.
+            </p>
           </div>
         </div>
       </div>
