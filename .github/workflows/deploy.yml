@@ -21,6 +21,8 @@ jobs:
           docker build -t ${{ env.IMAGE_NAME }}:latest \
                        -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
                        --build-arg VITE_API_URL=${{ secrets.VITE_API_URL }} \
+                       --build-arg VITE_MSAL_CLIENT_ID=${{ secrets.VITE_MSAL_CLIENT_ID }} \
+                       --build-arg VITE_MSAL_TENANT_ID=${{ secrets.VITE_MSAL_TENANT_ID }} \
                        .
 
       - name: Save image to tarball
