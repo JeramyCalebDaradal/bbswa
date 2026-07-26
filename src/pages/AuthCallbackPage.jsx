@@ -84,13 +84,17 @@ function AuthCallback() {
         if (!mounted) return
 
         // Store user info in session
+        const role = Array.isArray(userData.roles) && userData.roles.length > 0
+          ? userData.roles[0]
+          : 'Default'
+
         const user = {
-          id: userData.user?.id || account.homeAccountId,
-          email: userData.user?.email || account.username,
-          name: userData.user?.name || account.name || account.username,
-          role: userData.user?.role || 'Default',
-          oid: userData.user?.oid || account.idTokenClaims?.oid || account.idTokenClaims?.sub,
-          tid: userData.user?.tid || account.idTokenClaims?.tid,
+          id: account.homeAccountId,
+          email: userData.upn || account.username,
+          name: account.name || userData.upn || account.username,
+          role,
+          oid: userData.oid || account.idTokenClaims?.oid || account.idTokenClaims?.sub,
+          tid: userData.tid || account.idTokenClaims?.tid,
         }
 
         setSession(user, entraToken, new Date(Date.now() + 3600000).toISOString())
