@@ -88,26 +88,32 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'msal-preserve-side-effects',
+        enforce: 'pre',
+        async resolveId(source, importer, options) {
+          if (source.includes('@azure/msal-browser')) {
+            const resolved = await this.resolve(source, importer, {
+              ...options,
+              skipSelf: true,
+            })
+            if (resolved) {
+              return { ...resolved, moduleSideEffects: true }
+            }
+          }
+          return null
+        },
+      },
+    ],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(viteApiUrl),
       'import.meta.env.API_URL': JSON.stringify(apiUrl),
     },
     optimizeDeps: {
       include: ['@azure/msal-browser'],
-    },
-    build: {
-      commonjsOptions: {
-        include: [/@azure\/msal-browser/, /node_modules/],
-      },
-      rollupOptions: {
-        treeshake: {
-          moduleSideEffects: (id) => {
-            if (id.includes('@azure/msal-browser')) return true
-            return 'no-external'
-          },
-        },
-      },
     },
   }
 })
