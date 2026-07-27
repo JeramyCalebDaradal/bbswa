@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Save } from 'lucide-react'
-import { readToken, readTokenExpiresAt, readUser, setSession } from '../../auth/session'
+import { readUser, setSession } from '../../auth/session'
 import { changePassword, updateProfile } from '../../api/auth'
 
 function initialsFromUser(user) {
@@ -56,9 +56,7 @@ export default function ProfileSettings() {
       })
 
       if (res?.user) {
-        const token = readToken()
-        const tokenExpiresAt = readTokenExpiresAt()
-        setSession({ ...user, ...res.user }, token, tokenExpiresAt)
+        setSession({ ...user, ...res.user })
       }
 
       setSuccess('Profile updated successfully.')

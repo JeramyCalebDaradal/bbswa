@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/dashboard/Sidebar'
-import { clearSession, isAuthenticated, readToken, readTokenExpiresAt, readUser, setSession } from '../auth/session'
+import { clearSession, isAuthenticated, readUser, subscribeAuthChange } from '../auth/session'
 import { roleAllowsDashboardSection } from '../auth/session'
 import { useToast } from '../components/ui/useToast'
-import { me } from '../api/auth'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -14,42 +13,40 @@ export default function DashboardPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true)
 
   useEffect(() => {
-    let alive = true
-    const run = async () => {
-      const authed = isAuthenticated()
-      if (!authed) {
-        clearSession()
-        navigate('/login', { replace: true })
+    const currentUser = readUser()
+    const hasValidUser =
+      currentUser && typeof currentUser === 'object' && typeof currentUser.role === 'string' && currentUser.role.trim().length > 0
+
+    if (hasValidUser) {
+      setIsBootstrapping(false)
+      return undefined
+    }
+
+    if (!isAuthenticated()) {
+      clearSession()
+      navigate('/login', { replace: true })
+      setIsBootstrapping(false)
+      return undefined
+    }
+
+    const unsubscribe = subscribeAuthChange(() => {
+      const user = readUser()
+      const isReady = user && typeof user === 'object' && typeof user.role === 'string' && user.role.trim().length > 0
+      const stillAuthed = isAuthenticated()
+
+      if (isReady) {
+        setIsBootstrapping(false)
         return
       }
 
-      const user = readUser()
-      const hasValidUser = user && typeof user === 'object' && typeof user.role === 'string' && user.role.trim().length > 0
-      if (hasValidUser) return
-
-      try {
-        const res = await me()
-        const token = readToken()
-        const tokenExpiresAt = readTokenExpiresAt()
-        if (res?.user && token && tokenExpiresAt) {
-          setSession(res.user, token, tokenExpiresAt)
-          return
-        }
-        throw new Error('Unauthorized')
-      } catch {
+      if (!stillAuthed) {
         clearSession()
         navigate('/login', { replace: true })
+        setIsBootstrapping(false)
       }
-    }
-
-    run().finally(() => {
-      if (!alive) return
-      setIsBootstrapping(false)
     })
 
-    return () => {
-      alive = false
-    }
+    return unsubscribe
   }, [navigate])
 
   const activeSection = useMemo(() => {
