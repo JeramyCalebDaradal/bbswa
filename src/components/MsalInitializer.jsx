@@ -1,11 +1,36 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getMsalInstance, initializeMsal, restoreSession } from '../auth/msal'
+import { getMsalInstance, initializeMsal, restoreSession, getAccessToken } from '../auth/msal'
 import { setSession } from '../auth/session'
 
 // Module-level singleton so MSAL bootstrap runs exactly once across the app
 // lifecycle, even under React StrictMode double-invocation or route changes.
 let bootstrapPromise = null
+
+function decodeJwtPayload(token) {
+  try {
+    const parts = String(token || '').split('.')
+    if (parts.length < 2) return null
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    return JSON.parse(window.atob(padded))
+  } catch {
+    return null
+  }
+}
+
+async function resolveUserRole() {
+  try {
+    const token = await getAccessToken()
+    if (!token) return 'Default'
+    const payload = decodeJwtPayload(token)
+    const roles = Array.isArray(payload?.roles) ? payload.roles : []
+    return roles[0] || 'Default'
+  } catch (err) {
+    console.warn('[MsalInitializer] Failed to resolve app role from token:', err)
+    return 'Default'
+  }
+}
 
 async function bootstrapMsal() {
   if (bootstrapPromise) return bootstrapPromise
@@ -59,11 +84,12 @@ export default function MsalInitializer({ children }) {
         if (cancelled) return
 
         if (account) {
+          const resolvedRole = await resolveUserRole()
           const user = {
             id: account.localAccountId || account.homeAccountId,
             email: account.username,
             name: account.name || account.username,
-            role: 'Default',
+            role: resolvedRole,
             oid: account.localAccountId,
             tid: account.tenantId,
           }

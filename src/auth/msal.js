@@ -158,7 +158,7 @@ export function setActiveAccount(account) {
   }
 }
 
-export async function getAccessToken(scopes = ['User.Read']) {
+export async function getAccessToken(scopes = ['api://' + (import.meta.env.VITE_MSAL_CLIENT_ID || '') + '/user_impersonation']) {
   // Ensure MSAL is fully initialized before any token operations.
   // Silent/interactive APIs will throw otherwise, and acquireTokenRedirect
   // called before initialize() can leave a stale interaction_in_progress flag.
@@ -190,8 +190,7 @@ export async function getAccessToken(scopes = ['User.Read']) {
       console.log('[MSAL] Silent token acquisition failed, falling back to interactive redirect')
       // acquireTokenRedirect navigates away — this promise never resolves.
       await instance.acquireTokenRedirect({ scopes, account })
-      // Should not reach here; return to satisfy the type contract.
-      throw silentErr
+      return null
     }
     throw silentErr
   }
