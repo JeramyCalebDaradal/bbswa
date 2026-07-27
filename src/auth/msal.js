@@ -207,8 +207,19 @@ export function addEventCallback(callback) {
 }
 
 export function getInteractionStatus() {
-  const instance = getMsalInstance()
-  return instance.getInteractionStatus()
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return InteractionStatus.None
+  }
+
+  const clientId = msalConfig.auth.clientId
+  const browserStateKey = clientId ? `msal.${clientId}.interaction.status` : null
+  const fallbackKey = 'msal.interaction.status'
+
+  const status =
+    (browserStateKey ? window.sessionStorage.getItem(browserStateKey) : null) ||
+    window.sessionStorage.getItem(fallbackKey)
+
+  return status === InteractionStatus.InProgress ? InteractionStatus.InProgress : InteractionStatus.None
 }
 
 export function isInteractionInProgress() {
