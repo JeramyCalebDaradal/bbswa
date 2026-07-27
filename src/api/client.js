@@ -1,77 +1,33 @@
-import { clearSession, isTokenExpired, readToken } from '../auth/session'
+import { isAuthenticated, clearSession } from '../auth/session'
+import { getAccessToken, addEventCallback } from '../auth/msal'
 
 const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1'
 
 const rateBuckets = new Map()
 
-// ──────────────────────────────────────────────
-//  Access token (new token rotation system)
-//  Primary: in-memory (cleared on page refresh).
-//  Backup: sessionStorage (survives page refresh, cleared when tab closes).
-//  The refresh token (HttpOnly cookie) is the real session — the access token
-//  is just a short-lived credential that can always be re-issued via /refresh.
-// ──────────────────────────────────────────────
-const ACCESS_TOKEN_KEY = '__bbs_at'
-
-function loadStoredToken() {
-  try {
-    return sessionStorage.getItem(ACCESS_TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-function storeToken(token) {
-  try {
-    if (token) {
-      sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
-    } else {
-      sessionStorage.removeItem(ACCESS_TOKEN_KEY)
-    }
-  } catch {}
-}
-
-let accessToken = loadStoredToken()
+// In-memory access token (MSAL-managed, refreshed silently)
+let accessToken = null
 let isRefreshing = false
 let refreshQueue = []
 
 /**
- * Called after login: store the access token in-memory + sessionStorage.
+ * Set the access token after successful MSAL token acquisition
  */
 export function setAccessToken(token) {
   accessToken = token
-  storeToken(token)
 }
 
 /**
- * Called after logout: clear the in-memory token + sessionStorage.
+ * Clear the access token on logout
  */
 export function clearAccessToken() {
   accessToken = null
-  storeToken(null)
 }
-
-// ──────────────────────────────────────────────
-//  Token helpers
-// ──────────────────────────────────────────────
 
 function base64UrlToString(value) {
   const input = String(value || '').replace(/-/g, '+').replace(/_/g, '/')
   const padded = input.padEnd(Math.ceil(input.length / 4) * 4, '=')
   return window.atob(padded)
-}
-
-function decodeJwtPayload(token) {
-  const raw = String(token || '').trim()
-  if (!raw || raw.startsWith('bbsenc:v1:')) return null
-  const parts = raw.split('.')
-  if (parts.length !== 3) return null
-  try {
-    const json = base64UrlToString(parts[1])
-    return JSON.parse(json)
-  } catch {
-    return null
-  }
 }
 
 function nowMs() {
@@ -108,72 +64,27 @@ function enforceRateLimit(method, route) {
 }
 
 /**
- * Determine which token to use for this request.
- * Priority: in-memory access token > legacy localStorage token.
+ * Get a valid access token from MSAL (acquires silently if needed)
  */
-function resolveToken() {
-  // New system: in-memory access token
-  if (accessToken) return { token: accessToken, type: 'new' }
+async function getValidAccessToken() {
+  // Return cached token if we have one
+  if (accessToken) return accessToken
 
-  // Legacy system: localStorage token
-  const legacy = readToken()
-  if (legacy) return { token: legacy, type: 'legacy' }
+  // Not authenticated at all
+  if (!isAuthenticated()) {
+    throw new Error('Not authenticated')
+  }
 
-  return { token: null, type: null }
+  // Acquire token silently from MSAL
+  const token = await getAccessToken(['User.Read'])
+  accessToken = token
+  return token
 }
 
 /**
- * Decode the payload of a JWT WITHOUT verifying the signature.
- * This works even for expired tokens (which is exactly what we need
- * during the refresh flow).
+ * Retry a request with a fresh token
  */
-function decodeExpiredJwt(token) {
-  try {
-    const parts = String(token || '').split('.')
-    if (parts.length !== 3) return null
-    const json = base64UrlToString(parts[1])
-    return JSON.parse(json)
-  } catch {
-    return null
-  }
-}
-
-/**
- * Call the /auth/refresh endpoint to get a new access token.
- * The refresh token is sent automatically as an HttpOnly cookie.
- * The userId is sent in the body (decoded from the expired access token)
- * so the backend can efficiently look up the correct refresh token row.
- */
-async function attemptRefresh() {
-  // Extract userId from the expired access token (no signature verification needed)
-  const payload = decodeExpiredJwt(accessToken)
-  const userId = payload?.sub ? Number(payload.sub) : null
-
-  const res = await fetch(`${baseUrl}/auth/refresh`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
-  })
-
-  if (!res.ok) {
-    throw new Error('Refresh failed')
-  }
-
-  const refreshPayload = await res.json()
-  if (refreshPayload?.accessToken) {
-    accessToken = refreshPayload.accessToken
-    return refreshPayload.accessToken
-  }
-
-  throw new Error('No access token in refresh response')
-}
-
-/**
- * Retry a request with the refreshed token.
- */
-async function retryWithRefreshedToken(originalArgs) {
-  // If a refresh is already in progress, queue this request
+async function retryWithFreshToken(originalArgs) {
   if (isRefreshing) {
     return new Promise((resolve, reject) => {
       refreshQueue.push({ resolve, reject, args: originalArgs })
@@ -182,9 +93,11 @@ async function retryWithRefreshedToken(originalArgs) {
 
   isRefreshing = true
   try {
-    await attemptRefresh()
+    // Force fresh token acquisition
+    accessToken = null
+    await getValidAccessToken()
 
-    // Replay all queued requests
+    // Replay queued requests
     const queue = refreshQueue.slice()
     refreshQueue = []
     queue.forEach((item) => {
@@ -193,123 +106,100 @@ async function retryWithRefreshedToken(originalArgs) {
 
     // Retry the original request
     return apiRequestRaw(originalArgs.route, originalArgs.options)
-  } catch (refreshError) {
-    // Refresh failed — clear everything, force re-login
+  } catch (err) {
+    // Token acquisition failed — clear session, force re-login
     accessToken = null
     refreshQueue = []
     clearSession()
     if (window.location.pathname !== '/login') {
       window.location.assign('/login')
     }
-    throw refreshError
+    throw err
   } finally {
     isRefreshing = false
   }
 }
 
 /**
- * Low-level fetch wrapper without auto-refresh (used internally).
+ * Low-level fetch wrapper
  */
 async function apiRequestRaw(route, options) {
   const method = options?.method || 'GET'
   const body = options?.body
 
   enforceRateLimit(method, route)
-  const resolved = resolveToken()
+
+  let token
+  try {
+    token = await getValidAccessToken()
+  } catch {
+    // If we can't get a token, proceed without it (will 401)
+    token = null
+  }
 
   const headers = {
-    ...(body ? { 'Content-Type': 'application/json' } : null),
-    ...(resolved.token ? { Authorization: `Bearer ${resolved.token}` } : null),
+    ...(options?.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+
+  if (body && !(body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const res = await fetch(`${baseUrl}${route}`, {
     method,
-    headers: Object.keys(headers).length ? headers : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include', // sends HttpOnly cookie automatically
+    headers,
+    body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
+    credentials: 'include',
   })
 
-  const payload = await res.json().catch(() => null)
+  // 401 — token expired or invalid, try to get fresh token and retry once
+  if (res.status === 401 && token) {
+    return retryWithFreshToken({ route, options })
+  }
 
   if (!res.ok) {
-    const message = payload?.error?.message || payload?.message || 'Request failed'
-    const err = new Error(message)
+    let errorMessage = `HTTP ${res.status}`
+    let errorData = null
+    try {
+      errorData = await res.json()
+      errorMessage = errorData?.error || errorData?.message || errorMessage
+    } catch {
+      // ignore parse errors
+    }
+    const err = new Error(errorMessage)
     err.status = res.status
-    err.code = payload?.error?.code
+    err.code = errorData?.code || 'API_ERROR'
+    err.data = errorData
     throw err
   }
 
-  return payload
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    return res.json()
+  }
+  return res.text()
 }
 
-// ──────────────────────────────────────────────
-//  Main API request function
-// ──────────────────────────────────────────────
+/**
+ * Public API request function
+ */
+export async function apiRequest(route, options = {}) {
+  return apiRequestRaw(route, options)
+}
 
-export async function apiRequest(path, { method = 'GET', body } = {}) {
-  const route = String(path || '')
-  const token = readToken()
-  const requiresAuth =
-    route.startsWith('/admin') || route === '/auth/profile' || route === '/auth/password' || route === '/auth/me'
-  const isLoginOperation = route === '/auth/login' || route === '/auth/super-admin'
-
-  enforceRateLimit(method, route)
-
-  // Sender validation (legacy token system)
-  if (!isLoginOperation && token) {
-    const payload = decodeJwtPayload(token)
-    const sender = typeof payload?.sender === 'string' ? payload.sender.trim() : ''
-    const origin = String(window.location.origin || '').trim()
-    if (sender && origin && sender !== origin) {
-      clearSession()
-      console.warn('Discarded token due to sender mismatch', { sender, origin })
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login')
-      }
-      const err = new Error('Session invalid. Please sign in again.')
-      err.status = 401
-      err.code = 'SENDER_MISMATCH'
-      throw err
-    }
-  }
-
-  // Expiry check for legacy tokens
-  if (!isLoginOperation && token && isTokenExpired()) {
+/**
+ * Set up MSAL event listener for logout
+ */
+addEventCallback((message) => {
+  if (message.eventType === EventType.LOGOUT_SUCCESS) {
+    console.log('[API] MSAL logout detected, clearing session')
     clearSession()
+    clearAccessToken()
     if (window.location.pathname !== '/login') {
       window.location.assign('/login')
     }
-    const err = new Error('Session expired. Please sign in again.')
-    err.status = 401
-    err.code = 'TOKEN_EXPIRED'
-    throw err
   }
+})
 
-  // Auth requirement check
-  if (!isLoginOperation && requiresAuth && !token && !accessToken) {
-    clearSession()
-    if (window.location.pathname !== '/login') {
-      window.location.assign('/login')
-    }
-    const err = new Error('Please sign in to continue.')
-    err.status = 401
-    err.code = 'UNAUTHORIZED'
-    throw err
-  }
-
-  try {
-    return await apiRequestRaw(route, { method, body })
-  } catch (err) {
-    // Auto-refresh: only attempt refresh for 401 errors and only when
-    // we have an in-memory access token (new system).
-    // Legacy tokens get the old behavior (immediate redirect).
-    if (err.status === 401 && accessToken && !isLoginOperation) {
-      try {
-        return await retryWithRefreshedToken({ route, options: { method, body } })
-      } catch (refreshErr) {
-        throw refreshErr
-      }
-    }
-    throw err
-  }
-}
+export { baseUrl }

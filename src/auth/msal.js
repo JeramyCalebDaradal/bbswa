@@ -37,161 +37,146 @@ const msalConfig = {
         }
       },
       piiLoggingEnabled: false,
-      logLevel: import.meta.env.DEV ? 3 : 1,
+      logLevel: 3,
     },
   },
 }
 
-// Login request - requests access token for our backend API
-const loginRequest = {
-  scopes: [
-    `api://${import.meta.env.VITE_MSAL_CLIENT_ID || ''}/access_as_user`,
-    'openid',
-    'profile',
-    'email',
-    'User.Read',
-  ],
-  prompt: 'select_account',
-}
+let msalInstance = null
+let isInitializing = false
+let initializationPromise = null
+let restorePromise = null
 
-// Silent request for token renewal
-const silentRequest = {
-  scopes: [
-    `api://${import.meta.env.VITE_MSAL_CLIENT_ID || ''}/access_as_user`,
-    'openid',
-    'profile',
-    'email',
-    'User.Read',
-  ],
-}
-
-// Initialize MSAL
-export const msalInstance = new PublicClientApplication(msalConfig)
-
-// Initialize MSAL and handle redirect response
-export async function initializeMsal() {
-  try {
-    await msalInstance.initialize()
-    
-    // Handle redirect promise (for redirect flow)
-    const response = await msalInstance.handleRedirectPromise()
-    if (response) {
-      console.log('[MSAL] Redirect handled, user:', response.account?.username)
-    }
-    
-    // Set active account if exists
-    const accounts = msalInstance.getAllAccounts()
-    if (accounts.length > 0) {
-      msalInstance.setActiveAccount(accounts[0])
-      console.log('[MSAL] Active account set:', accounts[0].username)
-    }
-    
-    return true
-  } catch (error) {
-    console.error('[MSAL] Initialization failed:', error)
-    return false
+export function getMsalInstance() {
+  if (!msalInstance) {
+    msalInstance = new PublicClientApplication(msalConfig)
   }
+  return msalInstance
 }
 
-// Login with redirect (recommended for SPA)
+export async function initializeMsal() {
+  if (initializationPromise) return initializationPromise
+
+  isInitializing = true
+  initializationPromise = (async () => {
+    try {
+      const instance = getMsalInstance()
+      await instance.initialize()
+      isInitializing = false
+      return true
+    } catch (err) {
+      isInitializing = false
+      initializationPromise = null
+      console.error('[MSAL] Initialization failed:', err)
+      return false
+    }
+  })()
+
+  return initializationPromise
+}
+
+/**
+ * Restore MSAL account on app startup - called once when app loads
+ * This enables persistent sessions across page refreshes
+ */
+export async function restoreSession() {
+  if (restorePromise) return restorePromise
+
+  restorePromise = (async () => {
+    try {
+      const instance = getMsalInstance()
+      const accounts = instance.getAllAccounts()
+
+      if (accounts.length > 0) {
+        // Account exists in cache, session can be restored
+        // The active account will be used for silent token acquisition
+        console.log('[MSAL] Session restored, account found:', accounts[0].username)
+        return accounts[0]
+      }
+
+      console.log('[MSAL] No cached account found')
+      return null
+    } catch (err) {
+      console.error('[MSAL] Session restore failed:', err)
+      return null
+    }
+  })()
+
+  return restorePromise
+}
+
 export function loginRedirect() {
-  msalInstance.loginRedirect({
-    ...loginRequest,
-    redirectUri: `${window.location.origin}/auth/callback`,
+  const instance = getMsalInstance()
+  return instance.loginRedirect({
+    scopes: ['User.Read'],
+    prompt: 'select_account',
   })
 }
 
-// Login with popup (alternative)
-export async function loginPopup() {
-  try {
-    const response = await msalInstance.loginPopup({
-      ...loginRequest,
-      redirectUri: `${window.location.origin}/auth/callback`,
-    })
-    msalInstance.setActiveAccount(response.account)
-    return response
-  } catch (error) {
-    console.error('[MSAL] Popup login failed:', error)
-    throw error
-  }
+export function logoutRedirect() {
+  const instance = getMsalInstance()
+  return instance.logoutRedirect({
+    postLogoutRedirectUri: `${window.location.origin}/`,
+  })
 }
 
-// Logout
-export function logout() {
-  const account = msalInstance.getActiveAccount()
+export function getAccount() {
+  const instance = getMsalInstance()
+  const accounts = instance.getAllAccounts()
+  if (accounts.length === 0) return null
+  return accounts[0]
+}
+
+export function getActiveAccount() {
+  const instance = getMsalInstance()
+  return instance.getActiveAccount()
+}
+
+export function setActiveAccount(account) {
+  const instance = getMsalInstance()
   if (account) {
-    msalInstance.logoutRedirect({
-      account,
-      postLogoutRedirectUri: `${window.location.origin}/`,
-    })
+    instance.setActiveAccount(account)
   }
 }
 
-// Get access token for backend API (silent if possible)
-export async function getAccessToken() {
-  const account = msalInstance.getActiveAccount()
+export async function getAccessToken(scopes = ['User.Read']) {
+  const instance = getMsalInstance()
+  const account = getActiveAccount() || getAccount()
+
   if (!account) {
     throw new Error('No active account')
   }
 
   try {
-    // Try silent first
-    const response = await msalInstance.acquireTokenSilent({
-      ...silentRequest,
+    const response = await instance.acquireTokenSilent({
+      scopes,
       account,
     })
     return response.accessToken
-  } catch (silentError) {
-    // If silent fails, try popup
-    if (silentError.name === 'InteractionRequiredAuthError') {
-      try {
-        const response = await msalInstance.acquireTokenPopup({
-          ...silentRequest,
-          account,
-        })
-        return response.accessToken
-      } catch (popupError) {
-        console.error('[MSAL] Popup token acquisition failed:', popupError)
-        throw popupError
-      }
+  } catch (silentErr) {
+    // Silent acquisition failed - could be consent required or token expired
+    // Fall back to interactive acquisition
+    if (silentErr.name === 'InteractionRequiredAuthError' || silentErr.name === 'ServerError') {
+      console.log('[MSAL] Silent token acquisition failed, falling back to interactive')
+      const response = await instance.acquireTokenRedirect({ scopes, account })
+      return response.accessToken
     }
-    throw silentError
+    throw silentErr
   }
 }
 
-// Get ID token (for user info)
-export async function getIdToken() {
-  const account = msalInstance.getActiveAccount()
-  if (!account) return null
-  return account.idToken || null
-}
-
-// Get current account
-export function getAccount() {
-  return msalInstance.getActiveAccount()
-}
-
-// Check if user is authenticated
-export function isAuthenticated() {
-  return msalInstance.getAllAccounts().length > 0
-}
-
-// Subscribe to MSAL events - returns unsubscribe function
 export function addEventCallback(callback) {
-  const callbackId = msalInstance.addEventCallback((message) => {
-    callback(message)
-  })
-  // Return unsubscribe function
-  return () => {
-    if (callbackId) {
-      msalInstance.removeEventCallback(callbackId)
-    }
-  }
+  const instance = getMsalInstance()
+  return instance.addEventCallback(callback)
 }
 
-// Get interaction status
 export function getInteractionStatus() {
-  return msalInstance.getInteractionStatus()
+  const instance = getMsalInstance()
+  return instance.getInteractionStatus()
 }
 
-export { msalConfig, loginRequest, silentRequest }
+export function isInteractionInProgress() {
+  return getInteractionStatus() === InteractionStatus.InProgress
+}
+
+export { EventType, InteractionStatus }

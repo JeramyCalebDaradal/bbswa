@@ -1,68 +1,53 @@
-const AUTH_EVENT = 'bbs_auth_change'
-const TOKEN_KEY = 'bbs_token'
-const TOKEN_EXPIRES_AT_KEY = 'bbs_token_expires_at'
-let memoryUser = null
+import { getMsalInstance } from './msal'
 
+const AUTH_EVENT = 'bbs_auth_change'
+
+// In-memory user object (cleared on logout, rebuilt from MSAL on restore)
+let memoryUser = null
+let authInitialized = false
+let initPromise = null
+
+/**
+ * Read current user from memory or MSAL
+ */
 export function readUser() {
   if (memoryUser && typeof memoryUser === 'object') return memoryUser
-  const raw = localStorage.getItem('user')
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw)
-    memoryUser = parsed
-    return parsed
-  } catch {
-    return null
-  }
+  return null
 }
 
-export function readToken() {
-  const raw = localStorage.getItem(TOKEN_KEY)
-  return raw ? String(raw) : ''
-}
-
-export function readTokenExpiresAt() {
-  const raw = localStorage.getItem(TOKEN_EXPIRES_AT_KEY)
-  return raw ? String(raw) : ''
-}
-
-export function isTokenExpired() {
-  const expiresAt = readTokenExpiresAt()
-  if (!expiresAt) return true
-  const t = new Date(expiresAt).getTime()
-  if (!Number.isFinite(t) || t <= 0) return true
-  return Date.now() >= t
-}
-
+/**
+ * Check if user has an active MSAL session
+ */
 export function isAuthenticated() {
-  if (localStorage.getItem('isAuthenticated') !== 'true') return false
-  const token = readToken()
-  if (!token) return false
-  return !isTokenExpired()
+  try {
+    const instance = getMsalInstance()
+    return instance.getAllAccounts().length > 0
+  } catch {
+    return false
+  }
 }
 
+/**
+ * Set user session after successful authentication
+ */
 export function setSession(user, token, tokenExpiresAt) {
-  localStorage.setItem('isAuthenticated', 'true')
   memoryUser = user && typeof user === 'object' ? user : null
-  localStorage.removeItem('user')
-  if (typeof token === 'string' && token.trim()) {
-    localStorage.setItem(TOKEN_KEY, token.trim())
-  }
-  if (typeof tokenExpiresAt === 'string' && tokenExpiresAt.trim()) {
-    localStorage.setItem(TOKEN_EXPIRES_AT_KEY, tokenExpiresAt.trim())
-  }
+  authInitialized = true
   window.dispatchEvent(new Event(AUTH_EVENT))
 }
 
+/**
+ * Clear user session
+ */
 export function clearSession() {
-  localStorage.removeItem('isAuthenticated')
-  localStorage.removeItem('user')
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(TOKEN_EXPIRES_AT_KEY)
   memoryUser = null
+  authInitialized = true
   window.dispatchEvent(new Event(AUTH_EVENT))
 }
 
+/**
+ * Subscribe to auth state changes
+ */
 export function subscribeAuthChange(handler) {
   window.addEventListener(AUTH_EVENT, handler)
   window.addEventListener('storage', handler)
@@ -70,6 +55,33 @@ export function subscribeAuthChange(handler) {
     window.removeEventListener(AUTH_EVENT, handler)
     window.removeEventListener('storage', handler)
   }
+}
+
+/**
+ * Legacy token getters - kept for backward compatibility
+ * No longer used with MSAL-only flow
+ */
+export function readToken() {
+  return null
+}
+
+export function readTokenExpiresAt() {
+  return null
+}
+
+/**
+ * Initialization state getters
+ */
+export function getAuthInitialized() {
+  return authInitialized
+}
+
+export function getInitPromise() {
+  return initPromise
+}
+
+export function setInitPromise(promise) {
+  initPromise = promise
 }
 
 // Pages always accessible regardless of role

@@ -18,7 +18,8 @@ import {
 } from 'lucide-react'
 import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
 import { roleAllowsDashboardSection } from '../../auth/session'
-import { clearAccessToken, apiRequest } from '../../api/client'
+import { clearAccessToken } from '../../api/client'
+import { logoutRedirect } from '../../auth/msal'
 
 function getUserLastName(user) {
   if (!user || typeof user !== 'object') return ''
@@ -74,14 +75,9 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
   }, [isMobileOpen, setIsMobileOpen])
 
   const handleLogout = async () => {
-    try {
-      await apiRequest('/auth/logout', { method: 'POST' })
-    } catch {
-      // Silently ignore -- local session cleanup is sufficient
-    }
     clearAccessToken()
     clearSession()
-    navigate('/login')
+    logoutRedirect()
   }
 
   const menuItems = [

@@ -1,190 +1,84 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { EventType } from '@azure/msal-browser'
-import { initializeMsal, getAccessToken, getAccount, addEventCallback } from '../auth/msal'
-import { setAccessToken } from '../api/client'
-import { setSession } from '../auth/session'
-import { entraMe } from '../api/auth'
-import { useToast } from '../components/ui/useToast'
-import { Box, CircularProgress, Typography, Alert } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
+import { getMsalInstance, initializeMsal } from '../auth/msal'
+import { setSession, clearSession } from '../auth/session'
 
-function AuthCallback() {
+export default function AuthCallbackPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const toast = useToast()
-  const [status, setStatus] = useState('initializing')
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    let mounted = true
-
-    const handleAuth = async () => {
+    async function handleRedirect() {
       try {
-        setStatus('initializing')
-        
-        // Initialize MSAL and handle redirect
-        const initialized = await initializeMsal()
-        if (!mounted) return
-        
-        if (!initialized) {
-          setStatus('error')
-          setError('Failed to initialize authentication')
+        const instance = getMsalInstance()
+
+        // MSAL v3 automatically handles redirect response after initialize
+        const authResult = await instance.handleRedirectPromise()
+
+        if (!authResult) {
+          // No auth result from redirect - could be an error or just page load
+          console.log('[AuthCallback] No auth result from redirect')
+          navigate('/login')
           return
         }
 
-        setStatus('processing')
-
-        // Check if we got a valid account from redirect
-        const account = getAccount()
+        // Successful login - account is now cached in MSAL
+        const account = authResult.account
         if (!account) {
-          // Check for MSAL errors in URL
-          const msalError = searchParams.get('error')
-          const msalErrorDescription = searchParams.get('error_description')
-          
-          if (msalError) {
-            setStatus('error')
-            setError(`${msalError}: ${msalErrorDescription || 'Authentication failed'}`)
-            return
-          }
-          
-          setStatus('error')
-          setError('Authentication cancelled or failed')
+          console.warn('[AuthCallback] No account in auth result')
+          navigate('/login')
           return
         }
 
-        // Get the Entra access token from MSAL
-        let entraToken
+        // Set active account for token acquisition
+        instance.setActiveAccount(account)
+
+        // Get initial access token for session
         try {
-          entraToken = await getAccessToken()
-        } catch (tokenError) {
-          console.error('[AuthCallback] Token acquisition failed:', tokenError)
-          if (!mounted) return
-          setStatus('error')
-          setError('Failed to acquire access token')
-          return
+          const tokenResponse = await instance.acquireTokenSilent({
+            scopes: ['User.Read'],
+            account,
+          })
+        } catch (tokenErr) {
+          console.warn('[AuthCallback] Initial token acquisition failed:', tokenErr)
         }
 
-        if (!mounted) return
-
-        // Store the Entra token for API calls
-        setAccessToken(entraToken)
-
-        // Verify token with backend and get user info + role
-        let userData
-        try {
-          userData = await entraMe(entraToken)
-        } catch (backendError) {
-          console.error('[AuthCallback] Backend verification failed:', backendError)
-          if (!mounted) return
-          setStatus('error')
-          setError(backendError.message || 'Failed to verify sign-in with server')
-          return
-        }
-
-        if (!mounted) return
-
-        // Store user info in session
-        const role = Array.isArray(userData.roles) && userData.roles.length > 0
-          ? userData.roles[0]
-          : 'Default'
-
+        // Build user object from account info
         const user = {
-          id: account.homeAccountId,
-          email: userData.upn || account.username,
-          name: account.name || userData.upn || account.username,
-          role,
-          oid: userData.oid || account.idTokenClaims?.oid || account.idTokenClaims?.sub,
-          tid: userData.tid || account.idTokenClaims?.tid,
+          id: account.localAccountId || account.homeAccountId,
+          email: account.username,
+          name: account.name || account.username,
+          role: 'Default', // Role is determined by backend based on app role assignments
+          oid: account.localAccountId,
+          tid: account.tenantId,
         }
 
-        setSession(user, entraToken, new Date(Date.now() + 3600000).toISOString())
-
-        if (!mounted) return
-        setStatus('success')
+        setSession(user)
+        navigate('/dashboard')
       } catch (err) {
-        console.error('[AuthCallback] Error:', err)
-        if (!mounted) return
-        setStatus('error')
+        console.error('[AuthCallback] Redirect handling failed:', err)
         setError(err.message || 'Authentication failed')
+        clearSession()
+        // Give user a moment to see the error before redirecting
+        setTimeout(() => navigate('/login'), 3000)
       }
     }
 
-    // Listen for MSAL events
-    const unsubscribe = addEventCallback((message) => {
-      if (message.eventType === EventType.LOGIN_SUCCESS) {
-        console.log('[AuthCallback] Login success:', message)
-      } else if (message.eventType === EventType.LOGIN_FAILURE) {
-        console.error('[AuthCallback] Login failure:', message)
-      }
+    // Initialize MSAL and handle redirect
+    initializeMsal().then(() => {
+      handleRedirect()
     })
+  }, [navigate])
 
-    handleAuth()
-
-    return () => {
-      mounted = false
-      unsubscribe()
-    }
-  }, [searchParams, navigate])
-
-  // On success, redirect to dashboard
-  useEffect(() => {
-    if (status === 'success') {
-      const redirectPath = sessionStorage.getItem('msalRedirectPath') || '/dashboard/overview'
-      sessionStorage.removeItem('msalRedirectPath')
-      navigate(redirectPath, { replace: true })
-    }
-  }, [status, navigate])
-
-  if (status === 'initializing') {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', flexDirection: 'column', gap: 2 }}>
-        <CircularProgress size={60} />
-        <Typography variant="body1" color="text.secondary">Initializing authentication...</Typography>
-      </Box>
-    )
-  }
-
-  if (status === 'processing') {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', flexDirection: 'column', gap: 2 }}>
-        <CircularProgress size={60} />
-        <Typography variant="body1" color="text.secondary">Completing sign in...</Typography>
-      </Box>
-    )
-  }
-
-  if (status === 'error') {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', px: 3 }}>
-        <Box sx={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-          <Alert severity="error" sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>Sign In Failed</Typography>
-            <Typography variant="body1">{error || 'An unknown error occurred'}</Typography>
-          </Alert>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Redirecting to login page...
-          </Typography>
-          <button
-            onClick={() => window.location.assign('/login')}
-            style={{
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#fff',
-              background: '#ff6900',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            Back to Login
-          </button>
-        </Box>
-      </Box>
-    )
-  }
-
-  return null
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4" />
+        <p className="text-gray-600">Completing sign-in...</p>
+        {error && (
+          <p className="mt-2 text-red-600 text-sm">{error}</p>
+        )}
+      </div>
+    </div>
+  )
 }
-
-export default AuthCallback
