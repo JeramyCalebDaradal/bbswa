@@ -91,22 +91,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      {
-        name: 'msal-preserve-side-effects',
-        enforce: 'pre',
-        async resolveId(source, importer, options) {
-          if (source.includes('@azure/msal-browser')) {
-            const resolved = await this.resolve(source, importer, {
-              ...options,
-              skipSelf: true,
-            })
-            if (resolved) {
-              return { ...resolved, moduleSideEffects: true }
-            }
-          }
-          return null
-        },
-      },
     ],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(viteApiUrl),
