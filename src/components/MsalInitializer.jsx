@@ -1,36 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getMsalInstance, initializeMsal, restoreSession, getAccessToken } from '../auth/msal'
+import { getMsalInstance, initializeMsal, restoreSession } from '../auth/msal'
 import { setSession } from '../auth/session'
+import { apiRequest } from '../api/client'
 
 // Module-level singleton so MSAL bootstrap runs exactly once across the app
 // lifecycle, even under React StrictMode double-invocation or route changes.
 let bootstrapPromise = null
 
-function decodeJwtPayload(token) {
-  try {
-    const parts = String(token || '').split('.')
-    if (parts.length < 2) return null
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
-    return JSON.parse(window.atob(padded))
-  } catch {
-    return null
-  }
-}
-
 async function resolveUserRole() {
   try {
-    // Never trigger an interactive redirect during app bootstrap.
-    // If silent token acquisition fails here, keep the user signed in and
-    // fall back to Default until a real API call resolves/refreshes the token.
-    const token = await getAccessToken(undefined, { interactive: false })
-    if (!token) return 'Default'
-    const payload = decodeJwtPayload(token)
-    const roles = Array.isArray(payload?.roles) ? payload.roles : []
+    const me = await apiRequest('/auth/entra/me')
+    const roles = Array.isArray(me?.roles) ? me.roles : []
     return roles[0] || 'Default'
   } catch (err) {
-    console.warn('[MsalInitializer] Failed to resolve app role from token silently:', err)
+    console.warn('[MsalInitializer] Failed to resolve app role from backend /auth/entra/me:', err)
     return 'Default'
   }
 }
