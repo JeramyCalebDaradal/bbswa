@@ -105,8 +105,24 @@ export async function restoreSession() {
   return restorePromise
 }
 
-export function loginRedirect() {
+export async function loginRedirect() {
+  // Make sure MSAL is initialized AND any pending redirect from a previous
+  // navigation has been processed (which clears the interaction_in_progress
+  // flag from sessionStorage). Without this, calling loginRedirect while the
+  // flag is stale throws BrowserAuthError: interaction_in_progress.
+  await initializeMsal()
   const instance = getMsalInstance()
+  try {
+    await instance.handleRedirectPromise()
+  } catch (err) {
+    console.warn('[MSAL] handleRedirectPromise before login failed:', err)
+  }
+
+  if (isInteractionInProgress()) {
+    console.warn('[MSAL] loginRedirect called while interaction in progress; ignoring')
+    return
+  }
+
   const clientId = import.meta.env.VITE_MSAL_CLIENT_ID
   // Request the backend API scope during login so consent is granted upfront.
   // This ensures acquireTokenSilent for api://<clientId>/.default succeeds later.
@@ -147,6 +163,11 @@ export function setActiveAccount(account) {
 }
 
 export async function getAccessToken(scopes = ['User.Read']) {
+  // Ensure MSAL is fully initialized before any token operations.
+  // Silent/interactive APIs will throw otherwise, and acquireTokenRedirect
+  // called before initialize() can leave a stale interaction_in_progress flag.
+  await initializeMsal()
+
   const instance = getMsalInstance()
   const account = getActiveAccount() || getAccount()
 
@@ -161,12 +182,20 @@ export async function getAccessToken(scopes = ['User.Read']) {
     })
     return response.accessToken
   } catch (silentErr) {
-    // Silent acquisition failed - could be consent required or token expired
-    // Fall back to interactive acquisition
+    // Silent acquisition failed — token expired or consent required
     if (silentErr.name === 'InteractionRequiredAuthError' || silentErr.name === 'ServerError') {
-      console.log('[MSAL] Silent token acquisition failed, falling back to interactive')
-      const response = await instance.acquireTokenRedirect({ scopes, account })
-      return response.accessToken
+      // Guard: never start a new interactive redirect while one is already
+      // in progress. Doing so throws BrowserAuthError: interaction_in_progress
+      // and leaves MSAL in a wedged state.
+      if (isInteractionInProgress()) {
+        console.warn('[MSAL] Silent token failed but interaction already in progress; skipping redirect')
+        throw silentErr
+      }
+      console.log('[MSAL] Silent token acquisition failed, falling back to interactive redirect')
+      // acquireTokenRedirect navigates away — this promise never resolves.
+      await instance.acquireTokenRedirect({ scopes, account })
+      // Should not reach here; return to satisfy the type contract.
+      throw silentErr
     }
     throw silentErr
   }

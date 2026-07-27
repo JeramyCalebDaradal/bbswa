@@ -8,11 +8,14 @@ export default function LoginPage() {
   const toast = useToast()
   const [msalLoading, setMsalLoading] = useState(false)
 
-  const handleMsalLogin = useCallback(() => {
+  const handleMsalLogin = useCallback(async () => {
     setMsalLoading(true)
     try {
       sessionStorage.setItem('msalRedirectPath', '/dashboard/overview')
-      loginRedirect()
+      await loginRedirect()
+      // If loginRedirect returns without navigating (e.g. interaction already
+      // in progress), reset the button state so the user can retry.
+      setMsalLoading(false)
     } catch (err) {
       console.error('MSAL login error:', err)
       toast.error('Failed to start Microsoft sign-in')
