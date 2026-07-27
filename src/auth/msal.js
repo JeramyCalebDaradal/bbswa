@@ -123,15 +123,11 @@ export async function loginRedirect() {
     return
   }
 
-  const clientId = import.meta.env.VITE_MSAL_CLIENT_ID
-  // Request the backend API scope during login so consent is granted upfront.
-  // This ensures acquireTokenSilent for api://<clientId>/.default succeeds later.
-  const scopes = ['User.Read']
-  if (clientId) {
-    scopes.push(`api://${clientId}/.default`)
-  }
+  // Login must only request delegated user scopes.
+  // `.default` cannot be combined with resource-specific delegated scopes like `User.Read`.
+  // We only request Microsoft Graph delegated scopes here.
   return instance.loginRedirect({
-    scopes,
+    scopes: ['User.Read', 'openid', 'profile', 'offline_access'],
     prompt: 'select_account',
   })
 }
