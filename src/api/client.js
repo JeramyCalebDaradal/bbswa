@@ -1,5 +1,5 @@
 import { isAuthenticated, clearSession } from '../auth/session'
-import { getAccessToken, addEventCallback } from '../auth/msal'
+import { getAccessToken, addEventCallback, EventType } from '../auth/msal'
 
 const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1'
 
