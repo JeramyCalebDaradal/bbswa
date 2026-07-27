@@ -21,13 +21,16 @@ function decodeJwtPayload(token) {
 
 async function resolveUserRole() {
   try {
-    const token = await getAccessToken()
+    // Never trigger an interactive redirect during app bootstrap.
+    // If silent token acquisition fails here, keep the user signed in and
+    // fall back to Default until a real API call resolves/refreshes the token.
+    const token = await getAccessToken(undefined, { interactive: false })
     if (!token) return 'Default'
     const payload = decodeJwtPayload(token)
     const roles = Array.isArray(payload?.roles) ? payload.roles : []
     return roles[0] || 'Default'
   } catch (err) {
-    console.warn('[MsalInitializer] Failed to resolve app role from token:', err)
+    console.warn('[MsalInitializer] Failed to resolve app role from token silently:', err)
     return 'Default'
   }
 }

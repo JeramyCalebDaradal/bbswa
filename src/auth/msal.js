@@ -158,7 +158,7 @@ export function setActiveAccount(account) {
   }
 }
 
-export async function getAccessToken(scopes = ['api://' + (import.meta.env.VITE_MSAL_CLIENT_ID || '') + '/user_impersonation']) {
+export async function getAccessToken(scopes = ['api://' + (import.meta.env.VITE_MSAL_CLIENT_ID || '') + '/user_impersonation'], { interactive = true } = {}) {
   // Ensure MSAL is fully initialized before any token operations.
   // Silent/interactive APIs will throw otherwise, and acquireTokenRedirect
   // called before initialize() can leave a stale interaction_in_progress flag.
@@ -180,6 +180,9 @@ export async function getAccessToken(scopes = ['api://' + (import.meta.env.VITE_
   } catch (silentErr) {
     // Silent acquisition failed — token expired or consent required
     if (silentErr.name === 'InteractionRequiredAuthError' || silentErr.name === 'ServerError') {
+      if (!interactive) {
+        throw silentErr
+      }
       // Guard: never start a new interactive redirect while one is already
       // in progress. Doing so throws BrowserAuthError: interaction_in_progress
       // and leaves MSAL in a wedged state.
