@@ -45,10 +45,16 @@ export async function listRoleConfigs() {
   return apiRequest('/admin/role-config')
 }
 
-export async function updateRoleConfig(roleName, allowedPages) {
+export async function updateRoleConfig(roleName, { allowedPages, description } = {}) {
   return apiRequest(`/admin/role-config/${encodeURIComponent(roleName)}`, {
     method: 'PUT',
-    body: { allowed_pages_json: allowedPages },
+    body: { allowed_pages_json: allowedPages, description },
+  })
+}
+
+export async function deleteRoleConfig(roleName) {
+  return apiRequest(`/admin/role-config/${encodeURIComponent(roleName)}`, {
+    method: 'DELETE',
   })
 }
 
