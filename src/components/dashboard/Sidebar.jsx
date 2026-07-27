@@ -19,7 +19,6 @@ import {
 import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
 import { roleAllowsDashboardSection } from '../../auth/session'
 import { clearAccessToken, apiRequest } from '../../api/client'
-import { useToast } from '../ui/useToast'
 
 function getUserLastName(user) {
   if (!user || typeof user !== 'object') return ''
@@ -51,7 +50,6 @@ function getUserInitials(user) {
 
 export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, setIsMobileOpen }) {
   const navigate = useNavigate()
-  const toast = useToast()
   const [user, setUser] = useState(() => readUser())
 
   useEffect(() => {
@@ -90,11 +88,28 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'content', label: 'Blog / Articles', icon: FileText },
+    {
+      id: 'content',
+      label: 'Blog / Articles',
+      icon: FileText,
+      children: [
+        { id: 'blog', label: 'Articles' },
+        { id: 'datasheets', label: 'Datasheets' },
+        { id: 'info-videos', label: 'Informational Video' },
+      ],
+    },
     { id: 'events', label: 'Events', icon: CalendarDays },
     { id: 'newsletter', label: 'Newsletter', icon: Mail },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'logging', label: 'Logging', icon: ClipboardList },
+    {
+      id: 'logging',
+      label: 'Logging',
+      icon: ClipboardList,
+      children: [
+        { id: 'logs', label: 'Action Logs' },
+        { id: 'api-logs', label: 'API Logs' },
+      ],
+    },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'users', label: 'User Directory', icon: Users },
     { id: 'role-config', label: 'Role Config', icon: ShieldCheck },
@@ -132,12 +147,9 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
           const isActive = activeSection === item.id
           const allowed = roleAllowsDashboardSection(user?.role, item.id)
 
-          if (item.id === 'content') {
-            const children = [
-              { id: 'blog', label: 'Articles' },
-              { id: 'datasheets', label: 'Datasheets' },
-              { id: 'info-videos', label: 'Informational Video' },
-            ]
+          if (Array.isArray(item.children)) {
+            const visibleChildren = item.children.filter((child) => roleAllowsDashboardSection(user?.role, child.id))
+            if (!visibleChildren.length) return null
 
             return (
               <section key={item.id} className="px-3">
@@ -146,28 +158,20 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
                   <span className="text-sm font-medium">{item.label}</span>
                 </div>
                 <div className="pb-2">
-                  {children.map((child) => {
-                    const childAllowed = roleAllowsDashboardSection(user?.role, child.id)
+                  {visibleChildren.map((child) => {
                     const childActive = activeSection === child.id
                     return (
                       <button
                         key={child.id}
                         type="button"
                         onClick={() => {
-                          if (!childAllowed) {
-                            toast.error("You don't have access to this page.")
-                            return
-                          }
                           onSectionChange(child.id)
                           if (window.innerWidth < 768) {
                             setIsMobileOpen(false)
                           }
                         }}
-                        disabled={!childAllowed}
                         className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
-                          !childAllowed
-                            ? 'cursor-not-allowed text-gray-600 opacity-50'
-                            : childActive
+                          childActive
                             ? 'bg-white/5 text-amber-400'
                             : 'text-gray-400 hover:bg-white/5 hover:text-white'
                         }`}
@@ -181,73 +185,20 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
             )
           }
 
-          if (item.id === 'logging') {
-            const children = [
-              { id: 'logs', label: 'Action Logs' },
-              { id: 'api-logs', label: 'API Logs' },
-            ]
-
-            return (
-              <section key={item.id} className="px-3">
-                <div className="flex items-center gap-3 px-3 py-3 text-gray-400">
-                  <Icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-                <div className="pb-2">
-                  {children.map((child) => {
-                    const childAllowed = roleAllowsDashboardSection(user?.role, child.id)
-                    const childActive = activeSection === child.id
-                    return (
-                      <button
-                        key={child.id}
-                        type="button"
-                        onClick={() => {
-                          if (!childAllowed) {
-                            toast.error("You don't have access to this page.")
-                            return
-                          }
-                          onSectionChange(child.id)
-                          if (window.innerWidth < 768) {
-                            setIsMobileOpen(false)
-                          }
-                        }}
-                        disabled={!childAllowed}
-                        className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
-                          !childAllowed
-                            ? 'cursor-not-allowed text-gray-600 opacity-50'
-                            : childActive
-                            ? 'bg-white/5 text-amber-400'
-                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-sm font-medium">{child.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            )
-          }
+          if (!allowed) return null
 
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => {
-                if (!allowed) {
-                  toast.error("You don't have access to this page.")
-                  return
-                }
                 onSectionChange(item.id)
                 if (window.innerWidth < 768) {
                   setIsMobileOpen(false)
                 }
               }}
-              disabled={!allowed}
               className={`flex w-full items-center gap-3 px-6 py-3 transition-all ${
-                !allowed
-                  ? 'cursor-not-allowed text-gray-600 opacity-50'
-                  : isActive
+                isActive
                   ? 'border-l-4 border-amber-500 bg-gradient-to-r from-amber-500/20 to-transparent text-amber-400'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
