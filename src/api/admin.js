@@ -26,18 +26,12 @@ export async function updateAdminUser(id, { role, status }) {
   })
 }
 
-// Entra SSO: read bbs_users directory cache
-export async function listBbsUsers({ page = 1, limit = 20, search = '', account_enabled = '' } = {}) {
+// Entra SSO: read users directly from Microsoft Graph
+export async function listBbsUsers({ search = '' } = {}) {
   const params = new URLSearchParams()
-  params.set('page', String(page))
-  params.set('limit', String(limit))
   if (search) params.set('search', search)
-  if (account_enabled !== '') params.set('account_enabled', account_enabled)
-  return apiRequest(`/admin/users?${params.toString()}`)
-}
-
-export async function getBbsUser(oid) {
-  return apiRequest(`/admin/users/${oid}`)
+  const query = params.toString()
+  return apiRequest(query ? `/admin/users?${query}` : '/admin/users')
 }
 
 // Entra SSO: role config (page access matrix)

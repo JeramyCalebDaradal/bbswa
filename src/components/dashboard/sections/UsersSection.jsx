@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, RefreshCw, ChevronLeft, ChevronRight, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Search, RefreshCw, UserCheck, UserX, AlertCircle } from 'lucide-react'
 import { listBbsUsers } from '../../../api/admin'
 
 const ROLE_BADGE = {
@@ -24,19 +24,13 @@ export default function UsersSection() {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
-  const LIMIT = 20
 
-  const fetchUsers = useCallback(async (pageNum, searchVal) => {
+  const fetchUsers = useCallback(async (searchVal) => {
     setLoading(true)
     setError(null)
     try {
-      const result = await listBbsUsers({ page: pageNum, limit: LIMIT, search: searchVal })
-      setUsers(result.data || [])
-      setTotal(result.total || 0)
-      setTotalPages(Math.max(1, Math.ceil((result.total || 0) / LIMIT)))
+      const result = await listBbsUsers({ search: searchVal })
+      setUsers(Array.isArray(result.users) ? result.users : [])
     } catch (err) {
       setError(err.message || 'Failed to load users')
     } finally {
@@ -45,30 +39,27 @@ export default function UsersSection() {
   }, [])
 
   useEffect(() => {
-    fetchUsers(page, search)
-  }, [page, search, fetchUsers])
+    fetchUsers(search)
+  }, [search, fetchUsers])
 
   const handleSearch = (e) => {
     e.preventDefault()
-    setPage(1)
     setSearch(searchInput.trim())
   }
 
   const handleRefresh = () => {
-    setPage(1)
     setSearch('')
     setSearchInput('')
-    fetchUsers(1, '')
+    fetchUsers('')
   }
 
   return (
     <section className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Directory</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Synced from Microsoft Entra ID &mdash; {total} user{total !== 1 ? 's' : ''}
+            Users from the Entra application &mdash; {users.length} user{users.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -82,7 +73,6 @@ export default function UsersSection() {
         </button>
       </div>
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -102,7 +92,6 @@ export default function UsersSection() {
         </button>
       </form>
 
-      {/* Error */}
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -110,7 +99,6 @@ export default function UsersSection() {
         </div>
       )}
 
-      {/* Table */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -120,8 +108,8 @@ export default function UsersSection() {
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Job Title</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Last Sync</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -139,7 +127,7 @@ export default function UsersSection() {
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={`${u.tid}-${u.oid}`} className="hover:bg-gray-50">
+                  <tr key={u.oid || u.email} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-semibold text-white">
@@ -148,11 +136,12 @@ export default function UsersSection() {
                         <span className="text-sm font-medium text-gray-900">{u.display_name || '—'}</span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{u.email || '—'}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{u.email || u.user_principal_name || '—'}</td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <RoleBadge role={u.app_role} />
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{u.department || '—'}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{u.job_title || '—'}</td>
                     <td className="whitespace-nowrap px-6 py-4">
                       {u.account_enabled ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
@@ -164,42 +153,12 @@ export default function UsersSection() {
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {u.synced_at ? new Date(u.synced_at).toLocaleDateString() : '—'}
-                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3">
-            <p className="text-sm text-gray-500">
-              Page {page} of {totalPages} &mdash; {total} users
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || loading}
-                className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || loading}
-                className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   )
