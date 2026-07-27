@@ -63,6 +63,9 @@ function enforceRateLimit(method, route) {
   rateBuckets.set(key, fresh)
 }
 
+// Backend API scope — must match the Entra app registration "Expose an API" scope
+const API_SCOPES = [`api://${import.meta.env.VITE_MSAL_CLIENT_ID}/.default`]
+
 /**
  * Get a valid access token from MSAL (acquires silently if needed)
  */
@@ -75,8 +78,8 @@ async function getValidAccessToken() {
     throw new Error('Not authenticated')
   }
 
-  // Acquire token silently from MSAL
-  const token = await getAccessToken(['User.Read'])
+  // Acquire token silently from MSAL for the backend API audience
+  const token = await getAccessToken(API_SCOPES)
   accessToken = token
   return token
 }

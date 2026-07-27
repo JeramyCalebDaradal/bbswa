@@ -107,8 +107,15 @@ export async function restoreSession() {
 
 export function loginRedirect() {
   const instance = getMsalInstance()
+  const clientId = import.meta.env.VITE_MSAL_CLIENT_ID
+  // Request the backend API scope during login so consent is granted upfront.
+  // This ensures acquireTokenSilent for api://<clientId>/.default succeeds later.
+  const scopes = ['User.Read']
+  if (clientId) {
+    scopes.push(`api://${clientId}/.default`)
+  }
   return instance.loginRedirect({
-    scopes: ['User.Read'],
+    scopes,
     prompt: 'select_account',
   })
 }
