@@ -27,8 +27,10 @@ export async function updateAdminUser(id, { role, status }) {
 }
 
 // Entra SSO: read users directly from Microsoft Graph
-export async function listBbsUsers({ search = '' } = {}) {
+export async function listBbsUsers({ page = 1, limit = 20, search = '' } = {}) {
   const params = new URLSearchParams()
+  params.set('page', String(page))
+  params.set('limit', String(limit))
   if (search) params.set('search', search)
   const query = params.toString()
   return apiRequest(query ? `/admin/users?${query}` : '/admin/users')

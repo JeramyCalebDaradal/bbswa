@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, RefreshCw, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Search, RefreshCw, UserCheck, UserX, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { listBbsUsers } from '../../../api/admin'
 
 const ROLE_BADGE = {
@@ -24,33 +24,41 @@ export default function UsersSection() {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(1)
+  const [limit] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const fetchUsers = useCallback(async (searchVal) => {
+  const fetchUsers = useCallback(async (pageValue, searchVal) => {
     setLoading(true)
     setError(null)
     try {
-      const result = await listBbsUsers({ search: searchVal })
-      setUsers(Array.isArray(result.users) ? result.users : [])
+      const result = await listBbsUsers({ page: pageValue, limit, search: searchVal })
+      setUsers(Array.isArray(result.data) ? result.data : [])
+      setTotal(Number(result.total || 0))
+      setTotalPages(Math.max(1, Math.ceil(Number(result.total || 0) / limit)))
     } catch (err) {
       setError(err.message || 'Failed to load users')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [limit])
 
   useEffect(() => {
-    fetchUsers(search)
-  }, [search, fetchUsers])
+    fetchUsers(page, search)
+  }, [page, search, fetchUsers])
 
   const handleSearch = (e) => {
     e.preventDefault()
+    setPage(1)
     setSearch(searchInput.trim())
   }
 
   const handleRefresh = () => {
+    setPage(1)
     setSearch('')
     setSearchInput('')
-    fetchUsers('')
+    fetchUsers(1, '')
   }
 
   return (
@@ -59,7 +67,7 @@ export default function UsersSection() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Directory</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Users from the Entra application &mdash; {users.length} user{users.length !== 1 ? 's' : ''}
+            Users from the Entra application &mdash; {total} user{total !== 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -159,6 +167,32 @@ export default function UsersSection() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3">
+            <p className="text-sm text-gray-500">
+              Page {page} of {totalPages} &mdash; {total} users
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={page <= 1 || loading}
+                className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={page >= totalPages || loading}
+                className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
