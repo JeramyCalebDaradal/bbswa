@@ -1,49 +1,66 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Calendar, ChevronDown, Eye, Link2, MapPin, Plus, Search, Users } from 'lucide-react'
-import CreateEditEvent from './CreateEditEvent'
-import EventAttendeesModal from './EventAttendeesModal'
-import { createEvent, getEventAttendees, listEvents, updateEvent } from '../../api/events'
+import { Calendar, CalendarDays, ChevronDown, Eye, Link2, MapPin, Plus, Search, Users } from 'lucide-react'
+import { createEvent, deleteEvent, getEventAttendees, listEvents, updateEvent } from '../../api/events'
 import { readUser } from '../../auth/session'
+import { useToast } from '../ui/useToast'
+import CreateEditEvent from './CreateEditEvent'
 
-function formatDate(dateString) {
-  const date = dateString instanceof Date ? dateString : new Date(dateString)
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+function formatDate(value) {
+  if (!value) return 'No date set'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatTime(timeString) {
-  const [hours, minutes] = String(timeString || '').split(':')
-  const hour = Number.parseInt(hours || '0', 10)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayHour = hour % 12 || 12
-  return `${displayHour}:${minutes || '00'} ${ampm}`
+function formatTime(value) {
+  if (!value) return 'No time set'
+  const [h, m] = String(value).split(':')
+  const hour = Number(h)
+  const minute = Number(m)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return String(value)
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const normalized = hour % 12 || 12
+  return `${normalized}:${String(minute).padStart(2, '0')} ${suffix}`
 }
 
-function Pill({ variant, children }) {
-  const styles =
-    variant === 'online'
-      ? 'bg-blue-100 text-blue-700'
-      : variant === 'in person'
-        ? 'bg-purple-100 text-purple-700'
-        : 'bg-amber-100 text-amber-700'
-  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${styles}`}>{children}</span>
+function normalizeEvent(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    preview_image: row.preview_image || '',
+    date: row.date || '',
+    time: row.time || '',
+    location_type: row.location_type || 'online',
+    location_address: row.location_address || '',
+    description: row.description || '',
+    category: row.category || '',
+    capacity: Number(row.capacity || 0),
+    paid_event: Boolean(row.paid_event),
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    attendees_count: Number(row.attendees_count || 0),
+  }
 }
 
 export default function Events() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingEvent, setEditingEvent] = useState(null)
+  const toast = useToast()
   const [events, setEvents] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const [openMenuId, setOpenMenuId] = useState(null)
-  const [attendeesEvent, setAttendeesEvent] = useState(null)
+  const [attendeeEvent, setAttendeeEvent] = useState(null)
   const [attendees, setAttendees] = useState([])
-  const [attendeesError, setAttendeesError] = useState('')
-  const [isAttendeesLoading, setIsAttendeesLoading] = useState(false)
+  const [attendeesLoading, setAttendeesLoading] = useState(false)
+
   const [recordingEvent, setRecordingEvent] = useState(null)
   const [recordingDraft, setRecordingDraft] = useState('')
   const [recordingLinks, setRecordingLinks] = useState({})
@@ -62,14 +79,15 @@ export default function Events() {
     try {
       const targetPage = Number.isFinite(Number(nextPage)) && Number(nextPage) > 0 ? Math.trunc(Number(nextPage)) : page
       const res = await listEvents({ page: targetPage, q: searchTerm })
-      setEvents(Array.isArray(res?.events) ? res.events : [])
+      const list = Array.isArray(res?.events) ? res.events : []
+      setEvents(list.map(normalizeEvent))
       setPage(Number(res?.page || targetPage) || targetPage)
       setPageSize(Number(res?.pageSize || 20) || 20)
       setTotal(Number(res?.total || 0) || 0)
     } catch (err) {
-      setError(err?.message || 'Failed to load events')
       setEvents([])
       setTotal(0)
+      setError(err?.message || 'Failed to load events')
     } finally {
       setIsLoading(false)
     }
@@ -82,38 +100,23 @@ export default function Events() {
     return () => window.clearTimeout(timeoutId)
   }, [page, searchTerm])
 
-  useEffect(() => {
-    if (!openMenuId) return
-    const onDocClick = () => setOpenMenuId(null)
-    document.addEventListener('click', onDocClick)
-    return () => document.removeEventListener('click', onDocClick)
-  }, [openMenuId])
-
-  const fetchAttendees = async (eventId) => {
-    setAttendeesError('')
-    setIsAttendeesLoading(true)
+  const openAttendees = async (evt) => {
+    setAttendeeEvent(evt)
+    setAttendees([])
+    setAttendeesLoading(true)
     try {
-      const res = await getEventAttendees(eventId)
+      const res = await getEventAttendees(evt.id)
       setAttendees(Array.isArray(res?.attendees) ? res.attendees : [])
     } catch (err) {
-      setAttendeesError(err?.message || 'Failed to load attendees')
-      setAttendees([])
+      toast.error(err?.message || 'Failed to load attendees')
     } finally {
-      setIsAttendeesLoading(false)
+      setAttendeesLoading(false)
     }
-  }
-
-  const openAttendees = (evt) => {
-    setAttendeesEvent(evt)
-    setAttendees([])
-    setAttendeesError('')
-    fetchAttendees(evt.id)
   }
 
   const openRecording = (evt) => {
     setRecordingEvent(evt)
-    const existing = recordingLinks?.[evt.id]
-    setRecordingDraft(typeof existing === 'string' ? existing : '')
+    setRecordingDraft(recordingLinks[evt.id] || '')
   }
 
   const saveRecording = () => {
@@ -129,21 +132,46 @@ export default function Events() {
     setIsSaving(true)
     try {
       const user = readUser()
-      const createdBy = user?.id
-      if (!createdBy) {
+      const createdBy = Number(user?.id)
+      if (!Number.isFinite(createdBy) || createdBy <= 0) {
         throw new Error('Missing logged-in user')
       }
 
       if (editingEvent) {
         await updateEvent(editingEvent.id, { ...eventData, created_by: createdBy })
         await refresh()
+        toast.success('Event updated successfully.')
         return
       }
 
       await createEvent({ ...eventData, created_by: createdBy })
       await refresh({ nextPage: 1 })
+      toast.success('Event created successfully.')
+    } catch (err) {
+      const message = err?.message || 'Failed to save event'
+      setError(message)
+      toast.error(message)
+      throw err
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editingEvent?.id) return
+    setError('')
+    setIsDeleting(true)
+    try {
+      await deleteEvent(editingEvent.id)
+      await refresh()
+      toast.success('Event deleted successfully.')
+    } catch (err) {
+      const message = err?.message || 'Failed to delete event'
+      setError(message)
+      toast.error(message)
+      throw err
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -289,39 +317,29 @@ export default function Events() {
                     {tag}
                   </span>
                 ))}
-                {recordingLinks?.[evt.id] ? (
-                  <a
-                    href={recordingLinks[evt.id]}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                  >
-                    Recording
-                  </a>
-                ) : null}
               </div>
             </section>
           ))}
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <section className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
           <p className="text-sm text-gray-600">
-            Page {page} of {totalPages} • {total} total
+            Showing page {page} of {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setPage((p) => Math.max(1, Number(p || 1) - 1))}
-              disabled={isLoading || page <= 1}
-              className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page <= 1}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
             <button
               type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, Number(p || 1) + 1))}
-              disabled={isLoading || page >= totalPages}
-              className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={page >= totalPages}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>
@@ -329,97 +347,104 @@ export default function Events() {
         </section>
       </section>
 
-      <EventAttendeesModal
-        open={Boolean(attendeesEvent)}
-        eventTitle={attendeesEvent?.title}
-        attendees={attendees}
-        isLoading={isAttendeesLoading}
-        error={attendeesError}
-        onClose={() => {
-          setAttendeesEvent(null)
-          setAttendees([])
-          setAttendeesError('')
-        }}
-        onRefresh={() => (attendeesEvent?.id ? fetchAttendees(attendeesEvent.id) : null)}
-      />
+      {showCreateModal ? (
+        <CreateEditEvent
+          mode={editingEvent ? 'edit' : 'create'}
+          event={editingEvent}
+          onClose={() => {
+            setShowCreateModal(false)
+            setEditingEvent(null)
+          }}
+          onSave={handleSave}
+          onDelete={editingEvent ? handleDelete : undefined}
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+        />
+      ) : null}
 
-      {recordingEvent ? (
-        <section className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setRecordingEvent(null)}
-            aria-label="Close"
-          />
-          <section className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <section className="flex items-start justify-between gap-4">
-              <section>
-                <h3 className="text-xl font-semibold text-gray-900">URL recording</h3>
-                <p className="mt-1 text-sm text-gray-600">{recordingEvent.title}</p>
-              </section>
+      {attendeeEvent ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Attendees</h3>
+                <p className="text-sm text-gray-500">{attendeeEvent.title}</p>
+              </div>
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                onClick={() => setRecordingEvent(null)}
-                aria-label="Close"
+                onClick={() => setAttendeeEvent(null)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
-                <span className="text-lg leading-none">×</span>
+                Close
               </button>
-            </section>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
+              {attendeesLoading ? (
+                <p className="text-sm text-gray-600">Loading attendees...</p>
+              ) : attendees.length ? (
+                <div className="space-y-3">
+                  {attendees.map((attendee) => (
+                    <section key={attendee.id} className="rounded-lg border border-gray-100 p-4">
+                      <p className="font-medium text-gray-900">{attendee.name}</p>
+                      <p className="text-sm text-gray-600">{attendee.email}</p>
+                      <p className="text-sm text-gray-500">{attendee.contact_number}</p>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">No attendees yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-            <section className="mt-5 space-y-4">
-              <section>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Recording URL</label>
-                <input
-                  type="url"
-                  value={recordingDraft}
-                  onChange={(e) => setRecordingDraft(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <p className="mt-2 text-xs text-gray-500">Paste a link to the recording (Zoom, YouTube, Drive, etc.).</p>
-              </section>
-
-              <section className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      {recordingEvent ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recording URL</h3>
+              <p className="text-sm text-gray-500">{recordingEvent.title}</p>
+            </div>
+            <div className="space-y-4 px-6 py-4">
+              <input
+                type="url"
+                value={recordingDraft}
+                onChange={(e) => setRecordingDraft(e.target.value)}
+                placeholder="https://"
+                className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   onClick={() => setRecordingEvent(null)}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="cursor-pointer rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-amber-600 hover:to-amber-700"
                   onClick={saveRecording}
+                  className="rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-sm text-white hover:from-amber-600 hover:to-amber-700"
                 >
-                  Save
+                  Save URL
                 </button>
-              </section>
-            </section>
-          </section>
-        </section>
-      ) : null}
-
-      {showCreateModal ? (
-        <CreateEditEvent
-          mode={editingEvent ? 'edit' : 'create'}
-          event={
-            editingEvent
-              ? {
-                  ...editingEvent,
-                  tags: Array.isArray(editingEvent.tags) ? editingEvent.tags.join(', ') : '',
-                }
-              : undefined
-          }
-          onSave={handleSave}
-          isSaving={isSaving}
-          onClose={() => {
-            setShowCreateModal(false)
-            setEditingEvent(null)
-          }}
-        />
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   )
+}
+
+function Pill({ children, variant }) {
+  const base = 'rounded-full px-3 py-1 text-xs font-medium'
+  const styles =
+    variant === 'online'
+      ? 'bg-blue-100 text-blue-700'
+      : variant === 'in person'
+        ? 'bg-emerald-100 text-emerald-700'
+        : 'bg-amber-100 text-amber-700'
+  return <span className={`${base} ${styles}`}>{children}</span>
 }
