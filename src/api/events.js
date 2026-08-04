@@ -16,6 +16,10 @@ export async function updateEvent(id, payload) {
   return apiRequest(`/admin/events/${id}`, { method: 'PUT', body: payload })
 }
 
+export async function deleteEvent(id) {
+  return apiRequest(`/admin/events/${id}`, { method: 'DELETE' })
+}
+
 export async function getEventAttendees(id) {
   return apiRequest(`/admin/events/${id}/attendees`)
 }

@@ -16,3 +16,7 @@ export async function createAppointment(payload) {
 export async function updateAppointment(id, payload) {
   return apiRequest(`/admin/appointments/${id}`, { method: 'PUT', body: payload })
 }
+
+export async function deleteAppointment(id) {
+  return apiRequest(`/admin/appointments/${id}`, { method: 'DELETE' })
+}
