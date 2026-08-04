@@ -8,14 +8,29 @@ import { apiRequest } from '../api/client'
 // lifecycle, even under React StrictMode double-invocation or route changes.
 let bootstrapPromise = null
 
-async function resolveUserRole() {
+async function getCurrentUserProfile() {
   try {
     const me = await apiRequest('/auth/entra/me')
     const roles = Array.isArray(me?.roles) ? me.roles : []
-    return roles[0] || 'Default'
+    const backendId = Number(me?.id)
+    return {
+      role: roles[0] || 'Default',
+      backendId: Number.isFinite(backendId) && backendId > 0 ? backendId : null,
+      authUser: me?.auth_user || null,
+      upn: me?.upn || null,
+      oid: me?.oid || null,
+      tid: me?.tid || null,
+    }
   } catch (err) {
-    console.warn('[MsalInitializer] Failed to resolve app role from backend /auth/entra/me:', err)
-    return 'Default'
+    console.warn('[MsalInitializer] Failed to resolve current user from backend /auth/entra/me:', err)
+    return {
+      role: 'Default',
+      backendId: null,
+      authUser: null,
+      upn: null,
+      oid: null,
+      tid: null,
+    }
   }
 }
 
@@ -71,14 +86,18 @@ export default function MsalInitializer({ children }) {
         if (cancelled) return
 
         if (account) {
-          const resolvedRole = await resolveUserRole()
+          const profile = await getCurrentUserProfile()
+          const displayName =
+            [profile?.authUser?.first_name, profile?.authUser?.last_name].filter(Boolean).join(' ').trim() || account.name || account.username
+
           const user = {
-            id: account.localAccountId || account.homeAccountId,
-            email: account.username,
-            name: account.name || account.username,
-            role: resolvedRole,
-            oid: account.localAccountId,
-            tid: account.tenantId,
+            id: profile.backendId,
+            email: profile?.authUser?.email || account.username,
+            name: displayName,
+            role: profile.role,
+            oid: profile.oid || account.localAccountId,
+            tid: profile.tid || account.tenantId,
+            entraId: account.localAccountId || account.homeAccountId,
           }
           setSession(user)
 
