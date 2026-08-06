@@ -109,7 +109,6 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'users', label: 'User Directory', icon: Users },
     { id: 'role-config', label: 'Role Config', icon: ShieldCheck },
-    { id: 'profile-settings', label: 'Profile settings', icon: User },
   ]
 
   const SidebarContent = ({ showClose }) => (

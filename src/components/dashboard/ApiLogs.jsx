@@ -202,21 +202,12 @@ export default function ApiLogs() {
                 </tr>
               ) : (
                 rows.map((row) => {
-                  const emailPrefix = row.user_email ? String(row.user_email).split('@')[0] : null
                   const browser = extractBrowser(row.user_agent)
                   return (
                   <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                      {emailPrefix ? (
-                        <span className="group relative cursor-help border-b border-dotted border-gray-300">
-                          {emailPrefix}
-                          <span className="invisible group-hover:visible absolute bottom-full left-0 mb-1 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg z-10">
-                            {row.user_email}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">&mdash;</span>
-                      )}
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{row.user_name || '—'}</div>
+                      {row.user_id ? <div className="text-xs text-gray-500">ID: {row.user_id}</div> : null}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-600">
                       {formatDate(row.date_sent)}

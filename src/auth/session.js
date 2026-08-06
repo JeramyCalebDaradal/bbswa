@@ -85,7 +85,7 @@ export function setInitPromise(promise) {
 }
 
 // Pages always accessible regardless of role
-const ALWAYS_ALLOWED = new Set(['overview', 'profile-settings'])
+const ALWAYS_ALLOWED = new Set(['overview'])
 
 // Default access map (frontend fallback — authoritative access is enforced by the backend via bbs_role_config)
 // These must match the Entra App Role values exactly (PascalCase)

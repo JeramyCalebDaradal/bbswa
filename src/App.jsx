@@ -25,7 +25,6 @@ import DashboardEventsPage from './pages/DashboardPages/DashboardEventsPage'
 import DashboardNewsletterPage from './pages/DashboardPages/DashboardNewsletterPage'
 import DashboardReportsPage from './pages/DashboardPages/DashboardReportsPage'
 import DashboardSettingsPage from './pages/DashboardPages/DashboardSettingsPage'
-import DashboardProfileSettingsPage from './pages/DashboardPages/DashboardProfileSettingsPage'
 import DashboardLogsPage from './pages/DashboardPages/DashboardLogsPage'
 import DashboardApiLogsPage from './pages/DashboardPages/DashboardApiLogsPage'
 import DashboardUsersPage from './pages/DashboardPages/DashboardUsersPage'
@@ -201,7 +200,6 @@ function App({ initialWebsiteSettings }) {
                 <Route path="logs" element={<DashboardLogsPage />} />
                 <Route path="api-logs" element={<DashboardApiLogsPage />} />
                 <Route path="settings" element={<DashboardSettingsPage />} />
-                <Route path="profile-settings" element={<DashboardProfileSettingsPage />} />
                 <Route path="users" element={<DashboardUsersPage />} />
                 <Route path="role-config" element={<DashboardRoleConfigPage />} />
                 <Route path="*" element={<Navigate to="overview" replace />} />

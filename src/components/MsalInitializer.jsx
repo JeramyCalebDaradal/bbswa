@@ -87,8 +87,7 @@ export default function MsalInitializer({ children }) {
 
         if (account) {
           const profile = await getCurrentUserProfile()
-          const displayName =
-            [profile?.authUser?.first_name, profile?.authUser?.last_name].filter(Boolean).join(' ').trim() || account.name || account.username
+          const displayName = account.name || account.username
 
           const user = {
             id: profile.backendId,
