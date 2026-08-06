@@ -153,7 +153,6 @@ async function apiRequestRaw(route, options) {
     method,
     headers,
     body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
-    credentials: 'include',
   })
 
   // 401 — token expired or invalid, try to get fresh token and retry once

@@ -10,11 +10,11 @@ import {
   BarChart3,
   ClipboardList,
   Settings,
-  User,
   LogOut,
   Menu,
   X,
   ShieldCheck,
+  ChevronDown,
 } from 'lucide-react'
 import { clearSession, readUser, subscribeAuthChange } from '../../auth/session'
 import { roleAllowsDashboardSection } from '../../auth/session'
@@ -40,6 +40,11 @@ function truncateWithEllipsis(value, maxLength) {
   return `${v.slice(0, maxLength - 3)}...`
 }
 
+const GROUP_CHILDREN = {
+  content: ['blog', 'datasheets', 'info-videos'],
+  logging: ['logs', 'api-logs'],
+}
+
 function getUserInitials(user) {
   const lastName = getUserLastName(user)
   if (lastName) {
@@ -52,10 +57,21 @@ function getUserInitials(user) {
 export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, setIsMobileOpen }) {
   const navigate = useNavigate()
   const [user, setUser] = useState(() => readUser())
+  const [expandedGroups, setExpandedGroups] = useState(() => ({
+    content: GROUP_CHILDREN.content.includes(activeSection),
+    logging: GROUP_CHILDREN.logging.includes(activeSection),
+  }))
 
   useEffect(() => {
     return subscribeAuthChange(() => setUser(readUser()))
   }, [])
+
+  useEffect(() => {
+    const activeGroupId = Object.keys(GROUP_CHILDREN).find((groupId) => GROUP_CHILDREN[groupId].includes(activeSection))
+    if (activeGroupId) {
+      setExpandedGroups((prev) => ({ ...prev, [activeGroupId]: true }))
+    }
+  }, [activeSection])
 
   const displayName = useMemo(() => truncateWithEllipsis(getUserLastName(user) || 'User', 14), [user])
   const email = useMemo(() => {
@@ -146,36 +162,51 @@ export default function Sidebar({ activeSection, onSectionChange, isMobileOpen, 
             const visibleChildren = item.children.filter((child) => roleAllowsDashboardSection(user?.role, child.id))
             if (!visibleChildren.length) return null
 
+            const isExpanded = Boolean(expandedGroups[item.id])
+            const hasActiveChild = visibleChildren.some((child) => activeSection === child.id)
+
             return (
               <section key={item.id} className="px-3">
-                <div className="flex items-center gap-3 px-3 py-3 text-gray-400">
+                <button
+                  type="button"
+                  onClick={() => setExpandedGroups((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  aria-expanded={isExpanded}
+                  aria-controls={`sidebar-group-${item.id}`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 transition-all ${
+                    hasActiveChild ? 'text-amber-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
                   <Icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-                <div className="pb-2">
-                  {visibleChildren.map((child) => {
-                    const childActive = activeSection === child.id
-                    return (
-                      <button
-                        key={child.id}
-                        type="button"
-                        onClick={() => {
-                          onSectionChange(child.id)
-                          if (window.innerWidth < 768) {
-                            setIsMobileOpen(false)
-                          }
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
-                          childActive
-                            ? 'bg-white/5 text-amber-400'
-                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-sm font-medium">{child.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                  <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isExpanded ? (
+                  <div id={`sidebar-group-${item.id}`} className="pb-2">
+                    {visibleChildren.map((child) => {
+                      const childActive = activeSection === child.id
+                      return (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => {
+                            onSectionChange(child.id)
+                            if (window.innerWidth < 768) {
+                              setIsMobileOpen(false)
+                            }
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-lg px-6 py-2 transition-all ${
+                            childActive
+                              ? 'bg-white/5 text-amber-400'
+                              : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span className="text-sm font-medium">{child.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
               </section>
             )
           }
