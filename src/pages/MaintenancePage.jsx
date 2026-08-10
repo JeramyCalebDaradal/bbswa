@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock3, Facebook, Instagram, Linkedin, Mail, MapPin } from 'lucide-react'
+import { Clock3, Facebook, Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react'
 import bearBackground from '../assets/maintenance/maintenance-bear.jpg'
 import bbsLogo from '../assets/maintenance/bbs-logo.png'
 
@@ -12,6 +12,13 @@ const contactItems = [
     detail: 'We respond within 24 hours',
     icon: Mail,
     href: 'mailto:concierge@blackbearsecurities.com',
+  },
+  {
+    label: 'Call Us',
+    value: '+63 2 8883 7102',
+    detail: 'Available during business hours',
+    icon: Phone,
+    href: 'tel:+63288837102',
   },
 ]
 
@@ -95,7 +102,7 @@ export default function MaintenancePage() {
             <div className="h-px w-8 bg-[#2a2e2a]" />
           </div>
 
-          <section className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Maintenance information">
+          <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Maintenance information">
             {contactItems.map((item) => (
               <ContactItem key={item.label} {...item} />
             ))}
